@@ -9,6 +9,8 @@ import {Sound} from './audio.js';
 
 const $=id=>document.getElementById(id),canvas=$('world'),overlay=$('overlay'),ctx=overlay.getContext('2d');
 let scene,game=createGame(),clock=new FixedClock({step:STEP,maxFrame:.15,maxSteps:18}),paused=true,started=false,failed=false,lastTime=0,noticeUntil=0,hitUntil=0,hurtUntil=0,lastHUD=0;
+let renderDirty=true,drawDpr=0;
+const invalidate=()=>{renderDirty=true;};
 const sound=new Sound(),keys=new Set(),touch=new Map(),mouse=new Set();
 let drag=null,pendingFire=false,settings={sensitivity:1,fov:90,resolution:.85,lead:true,motion:matchMedia('(prefers-reduced-motion: reduce)').matches};
 $('motion').checked=settings.motion;
@@ -18,7 +20,7 @@ function notice(message,seconds=3){text('notice',message);noticeUntil=game.time+
 function clearInput(){keys.clear();touch.clear();mouse.clear();drag=null;pendingFire=false;document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));}
 function fatal(error){failed=true;paused=true;clock.setPaused(true);clearInput();sound.pause();$('fatal').hidden=false;text('fatal-message',`${error.message||error}. Try a browser with WebGL enabled, and serve this folder over HTTP rather than opening index.html directly.`);console.error(error);}
 function pause(reason='Paused'){
-  if(!started||paused)return;paused=true;clock.setPaused(true);clearInput();sound.pause();
+  if(!started||paused)return;invalidate();paused=true;clock.setPaused(true);clearInput();sound.pause();
   if(document.pointerLockElement===canvas)document.exitPointerLock();
   $('menu').hidden=false;$('footer').hidden=false;$('pause').hidden=true;$('hud').hidden=true;
   document.body.classList.add('in-menu','paused');document.body.classList.remove('in-play');
@@ -30,7 +32,7 @@ async function capture(){
   try{await canvas.requestPointerLock();}catch{notice('Drag the view to look. Use F to fire and Shift to jet.',5);}
 }
 function launch(training=false,resume=false){
-  if(failed)return;
+  if(failed)return;invalidate();
   if(!resume){game=createGame(training);clock.reset();noticeUntil=hitUntil=hurtUntil=0;text('notice','');}
   clearInput();paused=false;started=true;lastTime=performance.now();lastHUD=0;clock.setPaused(false);
   $('menu').hidden=true;$('footer').hidden=true;$('pause').hidden=false;$('hud').hidden=false;
@@ -39,7 +41,7 @@ function launch(training=false,resume=false){
   if(!resume)notice(training?'FLIGHT SCHOOL — Hold Space to ski. Hold Shift or RMB to jet.':'RIDGEBREAK — Clear six sentries, recover the core, return home.',5);
 }
 function finish(){
-  const won=game.status==='won';paused=true;clock.setPaused(true);clearInput();sound.pause();if(document.pointerLockElement===canvas)document.exitPointerLock();
+  const won=game.status==='won';invalidate();paused=true;clock.setPaused(true);clearInput();sound.pause();if(document.pointerLockElement===canvas)document.exitPointerLock();
   $('menu').hidden=false;$('footer').hidden=false;$('pause').hidden=true;$('hud').hidden=true;document.body.classList.add('in-menu','paused');document.body.classList.remove('in-play');
   text('title',won?'CORE RECOVERED':'FLIGHT ENDED');text('tagline',won?'Gravity was a suggestion.':'The ridge gets another round.');
   text('intro',won?'The core is home. Try a faster route through the basin.':'Use the ridges as cover and keep moving. The cyan landing zone repairs armour.');
@@ -50,10 +52,10 @@ $('launch').addEventListener('click',()=>launch(game.training,started&&game.stat
 $('training').addEventListener('click',()=>launch(started&&game.status==='playing'?false:true));
 $('pause').addEventListener('click',()=>pause('Flight paused'));
 $('sensitivity').addEventListener('input',e=>{settings.sensitivity=+e.target.value;text('sens-value',settings.sensitivity.toFixed(1));});
-$('fov').addEventListener('input',e=>{settings.fov=+e.target.value;text('fov-value',`${settings.fov}°`);});
-$('quality').addEventListener('change',e=>settings.resolution=+e.target.value);
+$('fov').addEventListener('input',e=>{settings.fov=+e.target.value;invalidate();text('fov-value',`${settings.fov}°`);});
+$('quality').addEventListener('change',e=>{settings.resolution=+e.target.value;invalidate();});
 $('lead-assist').addEventListener('change',e=>settings.lead=e.target.checked);
-$('motion').addEventListener('change',e=>settings.motion=e.target.checked);
+$('motion').addEventListener('change',e=>{settings.motion=e.target.checked;invalidate();});
 $('sound').addEventListener('click',()=>{sound.mute(!sound.muted);$('sound').setAttribute('aria-pressed',String(sound.muted));text('sound',sound.muted?'Sound off':'Sound on');});
 
 const controls=new Set(['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyE','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
@@ -63,7 +65,9 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>keys.delete(e.code));
 addEventListener('blur',()=>pause('Focus lost — flight paused'));
-document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Tab hidden — flight paused');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause('Tab hidden — flight paused');else invalidate();});
+addEventListener('resize',invalidate);addEventListener('pageshow',invalidate);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(invalidate).observe(canvas);
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement&&!paused)pause('Mouse released — flight paused');});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fatal(new Error('Graphics context was lost. Reload to restart'));});
 const look=(dx,dy)=>{game.player.yaw-=clamp(dx,-400,400)*.002*settings.sensitivity;game.player.pitch=clamp(game.player.pitch-clamp(dy,-400,400)*.002*settings.sensitivity,-1.48,1.48);};
@@ -131,7 +135,7 @@ function hud(){
   if(game.time>noticeUntil)text('notice','');
 }
 function drawOverlay(alpha){
-  const rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);
+  const rect=canvas.getBoundingClientRect(),dpr=Math.min(globalThis.devicePixelRatio||1,2),w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);
   if(overlay.width!==w||overlay.height!==h){overlay.width=w;overlay.height=h;}ctx.clearRect(0,0,w,h);
   if(paused)return;ctx.save();ctx.scale(dpr,dpr);const W=rect.width,H=rect.height;
   const screen=pos=>{const p=scene.project(pos);return p&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1?{x:(p.x+1)*W/2,y:(1-p.y)*H/2,depth:p.depth}:null;};
@@ -161,8 +165,12 @@ function frame(now){
   try{
     const elapsed=Math.max(0,(now-lastTime)/1000);lastTime=now;
     const result=clock.advance(elapsed,tick);
+    // Paused/menu state has no animation. Keep its composited frame until a
+    // resize, display-density change, graphics setting or lifecycle transition.
+    const dpr=globalThis.devicePixelRatio||1;
+    if(paused&&!renderDirty&&drawDpr===dpr){requestAnimationFrame(frame);return;}
     scene.draw(game,paused?1:result.alpha,{menu:!started,fov:settings.fov,resolution:settings.resolution,reducedMotion:settings.motion});
-    drawOverlay(result.alpha);
+    drawOverlay(result.alpha);renderDirty=false;drawDpr=dpr;
     if(!paused){sound.update(game.player);if(now-lastHUD>50){hud();lastHUD=now;}}
     requestAnimationFrame(frame);
   }catch(e){fatal(e);}

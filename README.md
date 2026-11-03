@@ -35,6 +35,7 @@ The mission is session-only. Restarting or reloading resets the run. Enemy respa
 - A complete solo mission with armour, failure, core collection, return and debrief; passive-enemy training mode.
 - Actual LibreQuake first-frame Enforcer and rocket-launcher meshes with original skins, concrete textures and weapon sounds. Static first frames are intentional; original skeletal/frame animation is not implemented.
 - VANILLAJS fixed clocks, vector/camera math, swept AABBs/moving-target queries and the release’s retained-buffer WebGL renderer. Terrain and gameplay extensions are game-owned.
+- OPT-based effect staging with reusable typed buffers, exact unchanged-upload detection and redraw-on-change menus/pause. See [measured rendering results](docs/OPTIMIZATION.md); visual detail and simulation rate are preserved.
 - Pause on Escape, lost focus, hidden tab and pointer-lock loss; held inputs are cancelled. Catch-up is capped, and render positions interpolate between physics ticks.
 - Local Web Audio, settings for sensitivity/FOV/resolution/lead guide/reduced motion, and a visible WebGL failure message.
 
@@ -46,6 +47,7 @@ Python 3 and Node 22+ are used for developer checks; there are **no packages to 
 
 ```sh
 node --test tests/*.test.mjs
+node scripts/bench-render.mjs
 python3 scripts/verify.py
 python3 scripts/build.py
 python3 -m http.server 8000 --directory dist
@@ -55,7 +57,7 @@ python3 -m http.server 8000 --directory dist
 
 Tests cover terrain/mesh agreement, an independent ray/triangle intersection oracle, intermediate-ridge hits, momentum, finite fuel, partial fuel exhaustion, high-speed landings, pylon collision, moving targets, projectile lifetime/capacity, inherited-velocity aiming, pause, replay, training, death and mission ordering. An input-driven pilot completes the entire training mission without teleportation or injected damage. This is an automated simulation test, not evidence of human play feel.
 
-CI additionally runs a Chromium software-WebGL smoke test of real shaders, model/texture loading, drawing and UI controls. See [VERIFICATION.md](VERIFICATION.md) for executed checks and limits. Fixed inputs replay identically in the tested JavaScript runtime; cross-browser bit-exactness and physical GPU performance are not claimed.
+CI additionally runs a Chromium software-WebGL check of real shaders, model/texture loading, drawing and UI controls. It compares fresh and optimized effect rendering pixel-for-pixel and verifies that idle frames stop drawing until invalidated. The paired CPU benchmark retains raw timings and upload counts without imposing noisy timing thresholds. See [VERIFICATION.md](VERIFICATION.md) for executed checks and limits. Fixed inputs replay identically in the tested JavaScript runtime; cross-browser bit-exactness and physical GPU performance are not claimed.
 
 ## GitHub Pages
 

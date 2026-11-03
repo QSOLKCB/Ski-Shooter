@@ -23,6 +23,8 @@ jobs:
           python-version: '3.12'
       - name: Physics, collision, replay and complete mission tests
         run: node --test tests/*.test.mjs
+      - name: Exact rendering parity and paired CPU observations
+        run: node scripts/bench-render.mjs
       - name: Verify source pins and model conversions
         run: python3 scripts/verify.py
       - name: Build allowlisted static package

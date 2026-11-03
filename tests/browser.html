@@ -1,6 +1,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ski-Shooter rendering verification</title></head><body><pre id="result">RUNNING</pre><canvas id="test" style="width:640px;height:400px"></canvas><iframe id="app" title="Ski-Shooter UI check" src="index.html" width="1280" height="720"></iframe><script type="module">
 import {Scene} from './src/render.js';
 import {createGame,stepGame,STEP} from './src/game.js';
+import {referenceEffects} from './tests/helpers/effects-reference.mjs';
+import {renderFixtures} from './tests/helpers/render-fixtures.mjs';
 const output=document.querySelector('#result'),checks=[];
 const check=(ok,message)=>{if(!ok)throw new Error(message);checks.push(message);};
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -16,20 +18,45 @@ try{
   const gl=scene.gl,pixels=new Uint8Array(scene.canvas.width*scene.canvas.height*4);gl.readPixels(0,0,scene.canvas.width,scene.canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
   const colors=new Set();for(let i=0;i<pixels.length;i+=16)colors.add(`${pixels[i]},${pixels[i+1]},${pixels[i+2]}`);
   check(colors.size>100,'rendered framebuffer contains varied scene pixels');
+  const read=()=>{const p=new Uint8Array(scene.canvas.width*scene.canvas.height*4);gl.readPixels(0,0,scene.canvas.width,scene.canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,p);return p;};
+  const retainedDynamic=scene.dynamic,retainedTrails=scene.trails;
+  const freshDynamic=scene.core.mesh([]),freshTrails=scene.core.mesh([],'lines');
+  for(const fixture of renderFixtures(4)){
+    for(const {game,alpha,reducedMotion} of fixture.frames){
+      const options={menu:false,fov:105,reducedMotion};scene.draw(game,alpha,options);const actual=read();
+      const reference=referenceEffects(game,alpha,reducedMotion);
+      scene.dynamic={mesh:freshDynamic,update(){scene.core.update(freshDynamic,reference.dynamic);}};
+      scene.trails={mesh:freshTrails,update(){scene.core.update(freshTrails,reference.lines);}};
+      try{scene.draw(game,alpha,options);const expected=read();if(!actual.every((v,i)=>v===expected[i]))throw Error('pixel mismatch: '+fixture.name);}
+      finally{scene.dynamic=retainedDynamic;scene.trails=retainedTrails;}
+    }
+    check(true,fixture.name+' framebuffer exactly matches fresh geometry');
+  }
+  scene.draw(game,1);let uploaded=0;const subData=gl.bufferSubData;
+  gl.bufferSubData=function(...args){uploaded+=args[2].byteLength;return subData.apply(this,args);};
+  scene.draw(game,1);check(uploaded===0,'unchanged native effect meshes upload zero bytes');gl.bufferSubData=subData;
+  check(gl.getError()===gl.NO_ERROR,'growth, shrink and reference comparisons have no GL errors');
   const app=document.querySelector('#app');let doc;
   for(let i=0;i<150;i++){doc=app.contentDocument;if(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled)break;await wait(20);}
   check(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled,'main UI loads real assets and enables launch');
   check(doc.querySelector('#fatal').hidden,'main UI has no startup failure');
+  const win=app.contentWindow,prototype=win.WebGLRenderingContext.prototype,drawArrays=prototype.drawArrays;
+  let draws=0;prototype.drawArrays=function(...args){draws++;return drawArrays.apply(this,args);};
+  await wait(100);draws=0;await wait(100);check(draws===0,'settled menu issues no redundant GL draws');
+  const fov=doc.querySelector('#fov');fov.value=100;fov.dispatchEvent(new win.Event('input'));await wait(100);
+  check(draws>0,'graphics settings redraw the idle scene');fov.value=90;fov.dispatchEvent(new win.Event('input'));
   doc.querySelector('#training').click();await wait(150);
   check(doc.querySelector('#menu').hidden&&!doc.querySelector('#hud').hidden,'flight school starts and displays HUD');
-  const win=app.contentWindow;win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyF'}));win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyF'}));
+  win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyF'}));win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyF'}));
   await wait(100);doc.querySelector('#pause').click();
   check(!doc.querySelector('#menu').hidden&&doc.querySelector('#title').textContent==='FLIGHT PAUSED','Pause returns to the menu');
+  await wait(100);draws=0;await wait(100);check(draws===0,'settled pause issues no redundant GL draws');
   doc.querySelector('#launch').click();await wait(100);win.dispatchEvent(new Event('blur'));
   check(doc.querySelector('#title').textContent==='FLIGHT PAUSED','focus loss pauses the mission');
   doc.querySelector('#settings').open=true;app.width='390';await wait(100);
   check(doc.documentElement.scrollWidth<=400,'narrow menu stays inside the viewport');
   check(doc.querySelector('#fatal').hidden,'UI remains free of fatal runtime errors');
+  prototype.drawArrays=drawArrays;
   output.textContent='PASS\n'+checks.join('\n');output.dataset.result='pass';
   if(new URLSearchParams(location.search).has('capture')){
     document.body.style.margin='0';output.hidden=true;document.querySelector('#test').hidden=true;
