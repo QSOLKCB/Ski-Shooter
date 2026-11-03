@@ -109,6 +109,10 @@ function explode(game,shot,point,direct,enemyAtImpact,playerAtImpact){
     const center=add(playerAtImpact,[0,1,0]),d=length(subtract(center,point));
     if(d<9&&lineClear(add(point,[0,.12,0]),center)){
       const strength=1-d/9;game.player.velocity=add(game.player.velocity,scale(normalize(subtract(center,point)),strength*16));
+      // A separating splash impulse releases ground contact before the next
+      // movement tick, so skiing cannot project the launch velocity away.
+      const p=game.player;
+      if(p.grounded&&dot(p.velocity,terrain(p.position[0],p.position[2]).normal)>1e-6)p.grounded=false;
       if(!game.training)damage(game,game.player,strength*18);
     }
   }

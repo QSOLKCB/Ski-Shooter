@@ -2,7 +2,8 @@
 
 ## Executed locally
 
-- 18 Node tests passed, including the independent ray/triangle terrain oracle and an input-driven completion of the full flight-school mission. The pilot does not teleport the player, kill targets directly, refill fuel or bypass the mission state machine.
+- 27 Node tests passed, including the independent ray/triangle terrain oracle and an input-driven completion of the full flight-school mission. The pilot does not teleport the player, kill targets directly, refill fuel or bypass the mission state machine.
+- Input regressions execute the real entrypoint handlers with a small DOM boundary and model Pointer Events' first-button/last-button transitions. They cover all LMB/RMB press/release orders, short clicks while jetting, input cancellation and the pointer-lock capture click. Physics regressions reproduce a grounded downward disc shot in training and raid, then verify lift-off, continued airborne motion and the existing self-damage/fuel behavior. The affected cases failed before the fixes and pass afterward.
 - Upstream file SHA-256 and Git blob identities verified. Both model/skin conversions regenerate byte-for-byte with Python’s standard library.
 - JavaScript syntax checks passed. The static build uses a fixed allowlist and emits a SHA-256/size manifest.
 - The managed preview browser was opened, but it cannot create a WebGL context. The game’s visible unsupported-graphics message appeared; visual rendering and hardware play feel could not be checked in that environment.

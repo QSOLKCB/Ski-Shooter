@@ -57,6 +57,29 @@ test('skiing retains momentum that walking deliberately brakes',()=>{
   for(let i=0;i<60;i++){movePlayer(a,{ski:true},STEP);movePlayer(b,{},STEP);}
   assert.ok(Math.hypot(a.velocity[0],a.velocity[2])>Math.hypot(b.velocity[0],b.velocity[2])+8);
 });
+for(const training of [true,false])test(`grounded disc jump lifts a skier in ${training?'training':'raid'} mode`,()=>{
+  const game=createGame(training),p=game.player;
+  p.position=[0,terrain(0,100).height+.03,100];p.previous=[...p.position];p.pitch=-1.48;
+  let impact=false;
+  for(let i=0;i<20;i++){
+    stepGame(game,{ski:true,fire:i===0},STEP);
+    if(game.events.some(e=>e.type==='explosion')){impact=true;break;}
+  }
+  assert.ok(impact,'the downward disc must explode');
+  const ground=()=>terrain(p.position[0],p.position[2]);
+  const outward=dot(p.velocity,ground().normal),clearance=p.position[1]-ground().height;
+  assert.ok(outward>10,'self splash supplies a separating impulse');
+  const health=p.health;
+  if(training)assert.equal(health,100);else assert.ok(health<100&&health>0,'raid keeps its self-damage cost');
+  stepGame(game,{ski:true},STEP);
+  assert.equal(p.grounded,false,'a separating impulse must leave ground contact');
+  assert.ok(dot(p.velocity,ground().normal)>outward-1,'the next tick must preserve the launch impulse');
+  assert.ok(p.position[1]-ground().height>clearance+.05,'the skier actually lifts off');
+  assert.equal(p.health,health,'the explosion must not charge damage again');
+  for(let i=0;i<24;i++)stepGame(game,{ski:true},STEP);
+  assert.ok(p.position[1]-ground().height>1,'the jump continues into an airborne arc');
+  assert.equal(p.energy,100,'disc jumping must not require jet fuel');
+});
 test('high-speed landings never leave the feet below rendered terrain',()=>{
   const p=createPlayer();p.position=[-170,80,20];p.previous=[...p.position];p.velocity=[95,-70,-10];p.grounded=false;
   for(let i=0;i<2400;i++){movePlayer(p,{ski:true},STEP);assert.ok(p.position[1]>=terrain(p.position[0],p.position[2]).height-1e-8);assert.ok([...p.position,...p.velocity,p.energy].every(Number.isFinite));}

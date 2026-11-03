@@ -68,9 +68,17 @@ document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockEleme
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fatal(new Error('Graphics context was lost. Reload to restart'));});
 const look=(dx,dy)=>{game.player.yaw-=clamp(dx,-400,400)*.002*settings.sensitivity;game.player.pitch=clamp(game.player.pitch-clamp(dy,-400,400)*.002*settings.sensitivity,-1.48,1.48);};
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
+// Mouse events report each button transition, including LMB/RMB chords.
+document.addEventListener('mousedown',e=>{
+  if(paused||document.pointerLockElement!==canvas)return;
+  e.preventDefault();mouse.add(e.button);if(e.button===0)pendingFire=true;
+});
+document.addEventListener('mouseup',e=>mouse.delete(e.button));
 canvas.addEventListener('pointerdown',e=>{
-  if(paused)return;e.preventDefault();
-  if(document.pointerLockElement===canvas){mouse.add(e.button);if(e.button===0)pendingFire=true;return;}
+  if(paused||document.pointerLockElement===canvas)return;
+  // Cancel only the capture/drag gesture; cancelling a locked pointerdown
+  // would suppress the compatibility mousedown used above.
+  e.preventDefault();
   if(e.pointerType==='mouse')capture();
   drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);
 });
@@ -79,7 +87,7 @@ document.addEventListener('pointermove',e=>{
   if(document.pointerLockElement===canvas){look(e.movementX,e.movementY);return;}
   if(drag?.id===e.pointerId){look(e.clientX-drag.x,e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;}
 });
-document.addEventListener('pointerup',e=>{mouse.delete(e.button);if(drag?.id===e.pointerId)drag=null;});
+document.addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)drag=null;});
 document.addEventListener('pointercancel',e=>{mouse.clear();if(drag?.id===e.pointerId)drag=null;});
 for(const button of document.querySelectorAll('[data-action]')){
   button.addEventListener('pointerdown',e=>{if(paused)return;e.preventDefault();button.setPointerCapture(e.pointerId);touch.set(e.pointerId,button.dataset.action);button.classList.add('held');if(button.dataset.action==='KeyF')pendingFire=true;});
