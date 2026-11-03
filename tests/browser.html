@@ -40,6 +40,8 @@ try{
     await wait(1800);
     win.dispatchEvent(new KeyboardEvent('keyup',{code:'ShiftLeft'}));
     win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW'}));
+    await wait(100);
+    document.documentElement.dataset.capture='ready';
   }
 }catch(error){output.textContent='FAIL\n'+error.stack;output.dataset.result='fail';}
 </script></body></html>
