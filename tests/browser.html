@@ -37,26 +37,30 @@ try{
   scene.draw(game,1);check(uploaded===0,'unchanged native effect meshes upload zero bytes');gl.bufferSubData=subData;
   check(gl.getError()===gl.NO_ERROR,'growth, shrink and reference comparisons have no GL errors');
   const app=document.querySelector('#app');let doc;
+  // Keep the UI under test visible to the compositor, then synchronize on its
+  // animation frames rather than assuming virtual timer advances imply draws.
+  app.style.cssText='position:fixed;top:0;left:0;z-index:10;border:0';
   for(let i=0;i<150;i++){doc=app.contentDocument;if(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled)break;await wait(20);}
   check(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled,'main UI loads real assets and enables launch');
   check(doc.querySelector('#fatal').hidden,'main UI has no startup failure');
-  const win=app.contentWindow,prototype=win.WebGLRenderingContext.prototype,drawArrays=prototype.drawArrays;
-  let draws=0;prototype.drawArrays=function(...args){draws++;return drawArrays.apply(this,args);};
-  await wait(100);draws=0;await wait(100);check(draws===0,'settled menu issues no redundant GL draws');
-  const fov=doc.querySelector('#fov');fov.value=100;fov.dispatchEvent(new win.Event('input'));await wait(100);
+  const win=app.contentWindow,appGL=doc.querySelector('#world').getContext('webgl'),drawArrays=appGL.drawArrays;
+  const frames=()=>new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+  let draws=0;appGL.drawArrays=function(...args){draws++;return drawArrays.apply(this,args);};
+  await frames();draws=0;await frames();check(draws===0,'settled menu issues no redundant GL draws');
+  const fov=doc.querySelector('#fov');fov.value=100;fov.dispatchEvent(new win.Event('input'));await frames();
   check(draws>0,'graphics settings redraw the idle scene');fov.value=90;fov.dispatchEvent(new win.Event('input'));
   doc.querySelector('#training').click();await wait(150);
   check(doc.querySelector('#menu').hidden&&!doc.querySelector('#hud').hidden,'flight school starts and displays HUD');
   win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyF'}));win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyF'}));
   await wait(100);doc.querySelector('#pause').click();
   check(!doc.querySelector('#menu').hidden&&doc.querySelector('#title').textContent==='FLIGHT PAUSED','Pause returns to the menu');
-  await wait(100);draws=0;await wait(100);check(draws===0,'settled pause issues no redundant GL draws');
+  await frames();draws=0;await frames();check(draws===0,'settled pause issues no redundant GL draws');
   doc.querySelector('#launch').click();await wait(100);win.dispatchEvent(new Event('blur'));
   check(doc.querySelector('#title').textContent==='FLIGHT PAUSED','focus loss pauses the mission');
   doc.querySelector('#settings').open=true;app.width='390';await wait(100);
   check(doc.documentElement.scrollWidth<=400,'narrow menu stays inside the viewport');
   check(doc.querySelector('#fatal').hidden,'UI remains free of fatal runtime errors');
-  prototype.drawArrays=drawArrays;
+  appGL.drawArrays=drawArrays;
   output.textContent='PASS\n'+checks.join('\n');output.dataset.result='pass';
   if(new URLSearchParams(location.search).has('capture')){
     document.body.style.margin='0';output.hidden=true;document.querySelector('#test').hidden=true;
