@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "name": "vanillajs",
+      "repository": "https://github.com/QSOLKCB/VANILLAJS",
+      "commit": "1f965f4e5b6669de0f954e3a39b11aa679e56720",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "site/vendor/vanillajs/modules/math/index.js",
+          "upstream_path": "modules/math/index.js",
+          "bytes": 3042,
+          "sha256": "4f4ebf0786b97342c11004b8830a535890b16693458a0436edb1fc581a411da7",
+          "git_blob": "45e5fc4d6c6daa472a89fa59c80e6fd70b2c1455"
+        },
+        {
+          "path": "site/vendor/vanillajs/modules/time/index.js",
+          "upstream_path": "modules/time/index.js",
+          "bytes": 1531,
+          "sha256": "ab52ba919ed14f34e4b04578959c06cf548a44d0162826bea227bc5faf877ac4",
+          "git_blob": "e009914fbcbb79ec70781aa32b9716fb37007f1f"
+        },
+        {
+          "path": "site/vendor/vanillajs/modules/collision/index.js",
+          "upstream_path": "modules/collision/index.js",
+          "bytes": 12454,
+          "sha256": "99c0f4bc106d4162fc5bea057a7108d7cf52526279b2a8ad4e4f27c1f0e6f5c1",
+          "git_blob": "60975e1e1d5914f0610de2e3ed3cbb241ce7f571"
+        },
+        {
+          "path": "site/vendor/vanillajs/modules/render-webgl/index.js",
+          "upstream_path": "modules/render-webgl/index.js",
+          "bytes": 4640,
+          "sha256": "1bd3ea03a3138dce6adf0794bf59d1c828b796b39407d2a04ad915240a888cf5",
+          "git_blob": "069f0aa9c7f93f640d54e8c688dd8bb484c9f45b"
+        },
+        {
+          "path": "site/vendor/vanillajs/LICENSE",
+          "upstream_path": "LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+          "git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+        },
+        {
+          "path": "site/vendor/vanillajs/NOTICE",
+          "upstream_path": "NOTICE",
+          "bytes": 4062,
+          "sha256": "c7f345e923ee78392ecc35f1a4a17a5ac1416beb71e631577b412730249c2aa0",
+          "git_blob": "40380759bc766dc97f3610050fbc258887fb7a93"
+        }
+      ]
+    },
+    {
+      "name": "librequake",
+      "repository": "https://github.com/lavenderdotpet/LibreQuake",
+      "commit": "347cb27eba57f1965d7c884c2bfd2857b4cde71f",
+      "license": "BSD-3-Clause",
+      "files": [
+        {
+          "path": "site/assets/librequake/enforcer.mdl",
+          "upstream_path": "lq1/progs/enforcer.mdl",
+          "bytes": 256488,
+          "sha256": "afe1face5e562c0c19224f8dcfacef730e0608284d755045841e0f5c7fc20670",
+          "git_blob": "1890d2aeebef14f8bfecb27172d9040b78d2b922"
+        },
+        {
+          "path": "site/assets/librequake/v_rock.mdl",
+          "upstream_path": "lq1/progs/v_rock.mdl",
+          "bytes": 61056,
+          "sha256": "e5652d6e789a493313e92c6a0046ecf7a9182439d98150a703216b29e1b40cd6",
+          "git_blob": "081a20c663cd6329bf0e5408219d579c0bf66cfb"
+        },
+        {
+          "path": "site/assets/librequake/palette.lmp",
+          "upstream_path": "lq1/gfx/palette.lmp",
+          "bytes": 768,
+          "sha256": "6b20b5bc4ea965ef1852b05670d043ca16148a0ecad4e63028121c8aebc268fe",
+          "git_blob": "7eefda1dae07f1db534e11a6f7f32d85e01324c6"
+        },
+        {
+          "path": "site/assets/librequake/rocket1i.wav",
+          "upstream_path": "lq1/sound/weapons/rocket1i.wav",
+          "bytes": 29270,
+          "sha256": "cc4fc1a71adf600fb187b5a2e9a0641e936598f3541ccc88f1c2fc736a3c7630",
+          "git_blob": "28a9d63d629ec9fec8ad06a3f1a08166b90e487a"
+        },
+        {
+          "path": "site/assets/librequake/r_exp3.wav",
+          "upstream_path": "lq1/sound/weapons/r_exp3.wav",
+          "bytes": 22008,
+          "sha256": "1e8f88abe043d8efc62e5de092984926b281c38f6d70092c678c79e1b8fda251",
+          "git_blob": "d5f8aefa6f5f2bdf1559b282cc293b8fc2665fed"
+        },
+        {
+          "path": "site/assets/librequake/lhit.wav",
+          "upstream_path": "lq1/sound/weapons/lhit.wav",
+          "bytes": 13350,
+          "sha256": "cea1a01ee83af85a6f59e142209e18b322928e4ff17f624f72d6a7cfca4655af",
+          "git_blob": "c15c2ab87a2d68bb9840c8a3937ebf425631c45f"
+        },
+        {
+          "path": "site/assets/librequake/conc1_1.png",
+          "upstream_path": "texture-wads/lq_conc/conc1_1.png",
+          "bytes": 9613,
+          "sha256": "95aafa4e1aea006f093f6e30694a41f38952afe7ec90cd717ba4a5cb197a604a",
+          "git_blob": "aa79589db875e2a3f7e1079bc1d994693bb8472e"
+        },
+        {
+          "path": "site/assets/librequake/COPYING",
+          "upstream_path": "docs/COPYING",
+          "bytes": 1697,
+          "sha256": "c3426ae10fd52ab1a3c3d4de4f2fae60543403e3cfd09ae5dc2ec16ae4717d28",
+          "git_blob": "42e21db929f1ed49d2f7d394ca3c11ced8f4cdf4"
+        },
+        {
+          "path": "site/assets/librequake/CREDITS",
+          "upstream_path": "docs/CREDITS",
+          "bytes": 3254,
+          "sha256": "60b632851de3e5d02cb96ed158ff06700ced1c9fb6425f2d5d10509392021bd0",
+          "git_blob": "3fb4507629caf084c56afe924a5f947704cbd2af"
+        }
+      ]
+    }
+  ]
+}

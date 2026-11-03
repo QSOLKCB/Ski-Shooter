@@ -1,0 +1,63 @@
+VANILLAJS — Flight Lab, Interaction Lab, FPS Lab, RTS Lab, OMI Lab, The Brass Engine and The Clockwork Vault
+Copyright 2026 QSOL–IMC / Trent Slade and contributors.
+Distributed under the repository's existing Apache License 2.0.
+
+The Flight Lab code, environments, UI and procedural geometry were authored for
+this repository. No game assets, audio recordings or third-party runtime code
+are included. QUICKSCOPER and CorpoWars were consulted as QSOL architectural
+references; this milestone does not copy their source files. Mathematical
+algorithms use conventional vector, quaternion, slab-intersection and rigid-body
+integration methods. Development-only tools are not included in the runtime.
+
+Interaction Lab's modules, rules, UI and procedural geometry are original work
+for this repository. David Nate Breslauer's Reaction Rumble project description
+inspired explaining condition-dependent outcomes; no game source, artwork or
+dataset was copied. The symbolic hydrogen/oxygen and neon examples reference
+Purdue University and Royal Society of Chemistry educational material. Scientific
+facts, scope and source URLs are documented in docs/INTERACTION_LAB.md.
+
+FPS Lab's controller, weapon timers, courses, UI and procedural geometry were
+independently authored for this repository. No external game source, artwork,
+audio or runtime dependency was copied. Its upright AABB controller uses the
+repository's slab-intersection/slide solver, not a capsule or slope solver.
+
+FPS motion extensions, relative-motion queries, stance controls, Low passage
+and Tracking range geometry and scenarios are independently authored for this
+repository. No external game code or assets are included in these additions.
+
+Platform riding, kinematic movement queries, Clearance lift and Shuttle run
+are independently authored extensions. No external game code or assets are used.
+
+RTS routing, navigation grids, the A* implementation, formation destinations,
+Canvas 2D presentation and lab traffic rules were independently authored for
+this repository. A* and breadth-first traversal are conventional algorithms;
+no third-party game source, assets or runtime dependencies were copied.
+
+Shared flow fields, incremental multi-source breadth-first integration, convoy
+and evacuation recipes, and search-work measurements are original extensions
+authored for this repository. No external game source, assets or runtime code
+are included. Multi-source shortest-path integration is a conventional method.
+
+ARCH-OMI-001 credits Brian Thorne's ARCH OMI as its conceptual reference.
+The pinned OMI delta law and OMINO tetrahedral incidence notes are identified
+in docs/ARCH_OMI.md. The finite-word kernel is independently implemented from
+mathematical rules. Four-nibble packing, valued XOR edges, the census, independent
+arithmetic oracle and UI are authored for this repository. No donor source files,
+proofs or assets are copied, and full OMI protocol conformance is not claimed.
+
+The Brass Engine is an independently authored, fictional mechanical presentation
+of the same attributed OMI delta rule. Its SVG drums, cams, staged evaluator,
+replay format and browser controls are original work for this repository. No
+historical reconstruction, physical analog mechanism or donor assets are claimed.
+
+The Clockwork Vault chamber, six puzzle definitions, graph search, progression,
+UI, replay validation and procedural geometry are independently authored for
+this repository. It composes the existing game modules and Brass Engine model;
+Brian Thorne’s ARCH OMI attribution and source boundaries remain in force.
+No third-party game code, artwork, audio or runtime dependency is introduced.
+
+Rendering reuse adapts the invariant-driven reuse and signature-bound incremental
+execution patterns in QSOLKCB/OPT at 7556dd36acd53ed3ed538fd03b1db44e5c1ec869.
+The JavaScript implementation is original; no Wonderbuild or other donor source
+is copied. Provenance, exactness contracts and measured limits are recorded in
+docs/OPTIMIZATION.md. Existing OMI attribution remains unchanged.

@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ski-Shooter rendering verification</title></head><body><pre id="result">RUNNING</pre><canvas id="test" style="width:640px;height:400px"></canvas><iframe id="app" title="Ski-Shooter UI check" src="index.html" width="1280" height="720"></iframe><script type="module">
+import {Scene} from './src/render.js';
+import {createGame,stepGame,STEP} from './src/game.js';
+const output=document.querySelector('#result'),checks=[];
+const check=(ok,message)=>{if(!ok)throw new Error(message);checks.push(message);};
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+try{
+  const scene=new Scene(document.querySelector('#test'));await scene.ready;
+  const game=createGame(true);scene.draw(game,1,{menu:true});
+  check(scene.enforcer.count===1389,'LibreQuake Enforcer mesh loaded');
+  check(scene.v_rock.count===936,'LibreQuake weapon mesh loaded');
+  check(scene.gl.getError()===scene.gl.NO_ERROR,'menu shaders, textures and draws have no GL error');
+  for(let i=0;i<360;i++)stepGame(game,{forward:1,jet:true,fire:true},STEP);
+  scene.draw(game,.5,{menu:false});
+  check(scene.gl.getError()===scene.gl.NO_ERROR,'active game shaders, weapon and draws have no GL error');
+  const gl=scene.gl,pixels=new Uint8Array(scene.canvas.width*scene.canvas.height*4);gl.readPixels(0,0,scene.canvas.width,scene.canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+  const colors=new Set();for(let i=0;i<pixels.length;i+=16)colors.add(`${pixels[i]},${pixels[i+1]},${pixels[i+2]}`);
+  check(colors.size>100,'rendered framebuffer contains varied scene pixels');
+  const app=document.querySelector('#app');let doc;
+  for(let i=0;i<150;i++){doc=app.contentDocument;if(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled)break;await wait(20);}
+  check(doc.querySelector('#launch')&&!doc.querySelector('#launch').disabled,'main UI loads real assets and enables launch');
+  check(doc.querySelector('#fatal').hidden,'main UI has no startup failure');
+  doc.querySelector('#training').click();await wait(150);
+  check(doc.querySelector('#menu').hidden&&!doc.querySelector('#hud').hidden,'flight school starts and displays HUD');
+  const win=app.contentWindow;win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyF'}));win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyF'}));
+  await wait(100);doc.querySelector('#pause').click();
+  check(!doc.querySelector('#menu').hidden&&doc.querySelector('#title').textContent==='FLIGHT PAUSED','Pause returns to the menu');
+  doc.querySelector('#launch').click();await wait(100);win.dispatchEvent(new Event('blur'));
+  check(doc.querySelector('#title').textContent==='FLIGHT PAUSED','focus loss pauses the mission');
+  doc.querySelector('#settings').open=true;app.width='390';await wait(100);
+  check(doc.documentElement.scrollWidth<=400,'narrow menu stays inside the viewport');
+  check(doc.querySelector('#fatal').hidden,'UI remains free of fatal runtime errors');
+  output.textContent='PASS\n'+checks.join('\n');output.dataset.result='pass';
+  if(new URLSearchParams(location.search).has('capture')){
+    document.body.style.margin='0';output.hidden=true;document.querySelector('#test').hidden=true;
+    app.style.cssText='position:fixed;inset:0;border:0;width:100vw;height:100vh';
+    doc.querySelector('#launch').click();
+    win.dispatchEvent(new KeyboardEvent('keydown',{code:'ShiftLeft'}));
+    win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW'}));
+    await wait(1800);
+    win.dispatchEvent(new KeyboardEvent('keyup',{code:'ShiftLeft'}));
+    win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW'}));
+    await wait(100);
+    document.documentElement.dataset.capture='ready';
+  }
+}catch(error){output.textContent='FAIL\n'+error.stack;output.dataset.result='fail';}
+</script></body></html>

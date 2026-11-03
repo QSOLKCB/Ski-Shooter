@@ -1,0 +1,14 @@
+Ski-Shooter — UPDRAFT
+Copyright 2026 QSOL–IMC / Trent Slade and contributors.
+Original code is distributed under Apache-2.0.
+
+Selected unmodified VANILLAJS modules retain their Apache-2.0 licence and
+NOTICE in site/vendor/vanillajs (vendor/vanillajs in the runtime package).
+
+Selected LibreQuake artwork and sounds retain their BSD-3-Clause terms.
+The complete COPYING and CREDITS are in site/assets/librequake
+(assets/librequake in the runtime package). No endorsement is implied.
+
+The procedural world, terrain movement, mission, interface and integration
+are original work. No Tribes source code or assets are included.
+See UPSTREAM.json and the in-game credits for exact source provenance.
