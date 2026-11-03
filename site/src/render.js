@@ -25,6 +25,11 @@ function cylinder(center,radius,height,color,sides=12){
     for(const v of [p,q,[q[0],y+height,q[2]],p,[q[0],y+height,q[2]],[p[0],y+height,p[2]],[x,y+height,z],[p[0],y+height,p[2]],[q[0],y+height,q[2]]])out.push(...v,...color);
   }return out;
 }
+function groundRing(x,z,radius,color){
+  const out=[],vertex=(a,r)=>{const X=x+Math.cos(a)*r,Z=z+Math.sin(a)*r;return [X,terrain(X,Z).height+.16,Z];};
+  for(let i=0;i<80;i++){const a=i/80*Math.PI*2,b=(i+1)/80*Math.PI*2,points=[vertex(a,radius),vertex(b,radius),vertex(b,radius-.35),vertex(a,radius-.35)];for(const k of [0,1,2,0,2,3])out.push(...points[k],...color);}
+  return out;
+}
 export class Scene {
   constructor(canvas){
     this.core=new Renderer(canvas);this.gl=this.core.gl;this.canvas=canvas;
@@ -48,9 +53,9 @@ export class Scene {
       lights.push(...boxVertices([x,y+10,z],[.4,2,.4],c));
     }
     for(const [base,col] of [[BASE,[.25,.95,.83]],[CORE,[1,.38,.12]]]){
-      const [x,z]=base,y=terrain(x,z).height+.12;
-      lights.push(...cylinder([x,y,z],8,.08,col),...cylinder([x,y+.1,z],7.4,.09,[.035,.07,.075]));
-      for(let k=0;k<4;k++){const a=k*Math.PI/2;lights.push(...boxVertices([x+Math.cos(a)*9,y+1,z+Math.sin(a)*9],[.25,2,.25],col));}
+      const [x,z]=base;
+      lights.push(...groundRing(x,z,8,col));
+      for(let k=0;k<4;k++){const a=k*Math.PI/2,X=x+Math.cos(a)*9,Z=z+Math.sin(a)*9;lights.push(...boxVertices([X,terrain(X,Z).height+1,Z],[.25,2,.25],col));}
     }
     for(let i=0;i<105;i++){
       const x=(rng()-.5)*490,z=(rng()-.5)*490;

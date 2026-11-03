@@ -11,7 +11,9 @@
 
 The workflow repeats the simulation, source and packaging checks. Its Chromium check uses explicitly selected **SwiftShader software WebGL**, loads the actual LibreQuake meshes/textures, checks for GL errors and varied framebuffer pixels, and exercises launch, flight school, pause, focus loss and narrow layout. It retains the assertion result, browser stderr, screenshot and package manifest as `ski-shooter-verification`.
 
-The workflow’s actual conclusion is authoritative. See the PR checks for this revision’s result; a configured check is not itself evidence that it passed. Physical GPU performance, Firefox/Safari, real touchscreen ergonomics, real pointer-lock aim feel and human play balance remain unverified. This is a solo prototype; no networking or multiplayer latency tests exist.
+The first [CI verification run](https://github.com/QSOLKCB/Ski-Shooter/actions/runs/41561720656) passed on source `a20438310bd91abdd354d0baefcc946c34c5a244`, including all 18 tests, source/derived-asset checks, packaging, and all 13 rendering/UI assertions. Its menu screenshot was inspected. The terrain-following landing-zone markers and flight screenshot capture were added after that run; consult the PR’s current-head checks for the final revision.
+
+Physical GPU performance, Firefox/Safari, real touchscreen ergonomics, real pointer-lock aim feel and human play balance remain unverified. This is a solo prototype; no networking or multiplayer latency tests exist.
 
 ## Limits
 

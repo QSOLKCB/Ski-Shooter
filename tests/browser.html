@@ -31,5 +31,15 @@ try{
   check(doc.documentElement.scrollWidth<=400,'narrow menu stays inside the viewport');
   check(doc.querySelector('#fatal').hidden,'UI remains free of fatal runtime errors');
   output.textContent='PASS\n'+checks.join('\n');output.dataset.result='pass';
+  if(new URLSearchParams(location.search).has('capture')){
+    document.body.style.margin='0';output.hidden=true;document.querySelector('#test').hidden=true;
+    app.style.cssText='position:fixed;inset:0;border:0;width:100vw;height:100vh';
+    doc.querySelector('#launch').click();
+    win.dispatchEvent(new KeyboardEvent('keydown',{code:'ShiftLeft'}));
+    win.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW'}));
+    await wait(1800);
+    win.dispatchEvent(new KeyboardEvent('keyup',{code:'ShiftLeft'}));
+    win.dispatchEvent(new KeyboardEvent('keyup',{code:'KeyW'}));
+  }
 }catch(error){output.textContent='FAIL\n'+error.stack;output.dataset.result='fail';}
 </script></body></html>

@@ -32,5 +32,7 @@ with tempfile.TemporaryDirectory(prefix='ski-shooter-browser-') as temporary:
     assert 'data-result="pass"' in result.stdout,'Browser assertions failed; see artifacts/browser-result.html'
     screenshot=subprocess.run(flags+['--user-data-dir='+str(Path(temporary)/'screenshot-profile'),'--virtual-time-budget=6000','--screenshot='+str(ARTIFACTS/'updraft-desktop.png'),origin+'/index.html'],capture_output=True,text=True,timeout=60)
     assert screenshot.returncode==0 and (ARTIFACTS/'updraft-desktop.png').is_file(),'Screenshot failed'
+    flight=subprocess.run(flags+['--user-data-dir='+str(Path(temporary)/'flight-profile'),'--virtual-time-budget=6000','--screenshot='+str(ARTIFACTS/'updraft-flight.png'),origin+'/browser-test.html?capture=flight'],capture_output=True,text=True,timeout=60)
+    assert flight.returncode==0 and (ARTIFACTS/'updraft-flight.png').is_file(),'Flight screenshot failed'
     server.shutdown()
     print('PASS: Chromium software-WebGL rendering, real assets, menu, flight school, pause, focus loss and narrow layout.')
