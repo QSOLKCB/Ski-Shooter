@@ -1,0 +1,428 @@
+{
+  "sourceBaseline": "17e3604fdea879c885aed5d36ae427b59648d025",
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD EPYC 9V74 80-Core Processor"
+  },
+  "scope": "CPU geometry and upload preparation; includes per-trial cold construction. Fake GL counts API work, not GPU time or driver memory. No module-load, simulation, UI or FPS measurement.",
+  "warmupPairs": 2,
+  "measuredPairs": 7,
+  "results": [
+    {
+      "name": "idle",
+      "frames": 240,
+      "fresh": [
+        {
+          "ms": 38.384937000000036,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 37.49390599999998,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 39.60414400000002,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 38.48777899999999,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 45.83169600000002,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 43.480459999999994,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        },
+        {
+          "ms": 47.119935000000055,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4561920,
+          "capacity": 19008,
+          "vertices": 190080,
+          "stagingBytes": null
+        }
+      ],
+      "retained": [
+        {
+          "ms": 3.4544710000000123,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.7352520000000027,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.7034550000000195,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.5504679999999667,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.9380120000000147,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.5886650000000486,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.8700019999999995,
+          "allocations": 4,
+          "uploads": 2,
+          "bytes": 19008,
+          "capacity": 24576,
+          "vertices": 190080,
+          "stagingBytes": 24576
+        }
+      ],
+      "medianMs": {
+        "fresh": 39.60414400000002,
+        "retained": 1.7352520000000027
+      }
+    },
+    {
+      "name": "flight",
+      "frames": 240,
+      "fresh": [
+        {
+          "ms": 55.46682200000009,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 49.01917500000002,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 56.67375000000004,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 50.15109700000005,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 48.458168,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 48.80572300000006,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        },
+        {
+          "ms": 52.7322979999999,
+          "allocations": 7,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 21360,
+          "vertices": 206246,
+          "stagingBytes": null
+        }
+      ],
+      "retained": [
+        {
+          "ms": 1.8508730000000924,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.2194279999999935,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.8732660000000578,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.570697999999993,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 2.483069999999998,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.7756920000000491,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        },
+        {
+          "ms": 1.8926750000000538,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 4949904,
+          "capacity": 24576,
+          "vertices": 206246,
+          "stagingBytes": 24576
+        }
+      ],
+      "medianMs": {
+        "fresh": 50.15109700000005,
+        "retained": 1.8508730000000924
+      }
+    },
+    {
+      "name": "maximum-effects",
+      "frames": 240,
+      "fresh": [
+        {
+          "ms": 518.9255370000001,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 489.0985660000001,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 535.4079219999999,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 512.3784060000007,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 537.7683769999994,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 481.56670099999974,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        },
+        {
+          "ms": 487.6596009999994,
+          "allocations": 5,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 189504,
+          "vertices": 1893888,
+          "stagingBytes": null
+        }
+      ],
+      "retained": [
+        {
+          "ms": 15.60853599999973,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 14.532912000000124,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 13.569392999999764,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 15.656758000000082,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 13.989997000000585,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 14.432813000000351,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        },
+        {
+          "ms": 13.969266000000061,
+          "allocations": 4,
+          "uploads": 480,
+          "bytes": 45453312,
+          "capacity": 262144,
+          "vertices": 1893888,
+          "stagingBytes": 262144
+        }
+      ],
+      "medianMs": {
+        "fresh": 512.3784060000007,
+        "retained": 14.432813000000351
+      }
+    }
+  ]
+}

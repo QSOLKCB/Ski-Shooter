@@ -15,21 +15,23 @@ class Element extends EventTarget {
   hidden=false;disabled=false;textContent='';style={};
   classList={add(){},remove(){},toggle(){}};
   focus(){}setAttribute(){}setPointerCapture(){}
-  getContext(){return {};}
+  getBoundingClientRect(){return {width:640,height:400};}
+  getContext(){return new Proxy({},{get:()=>()=>{}});}
 }
 class SilentSound {start(){return Promise.resolve();}pause(){}play(){}update(){}mute(){}}
-async function entrypoint(lockOnRequest=true){
+async function entrypoint(lockOnRequest=true,autoLaunch=true){
   const win=new EventTarget(),doc=new EventTarget(),elements=new Map();
   doc.getElementById=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
   doc.querySelectorAll=()=>[];doc.body=new Element();doc.pointerLockElement=null;
   const canvas=doc.getElementById('world');
   canvas.requestPointerLock=()=>{if(lockOnRequest)doc.pointerLockElement=canvas;return Promise.resolve();};
   doc.exitPointerLock=()=>{doc.pointerLockElement=null;doc.dispatchEvent(new Event('pointerlockchange'));};
+  const display={devicePixelRatio:1};
   const bindings={FixedClock,add,subtract,length,mix,clamp,castSegment,createGame,stepGame,aimLead,STEP,terrain,castTerrain,BASE,CORE,pylons,
-    Scene:class {ready=Promise.resolve();},Sound:SilentSound,document:doc,matchMedia:()=>({matches:false}),requestAnimationFrame:()=>0,
+    Scene:class {ready=Promise.resolve();draws=0;camera=[0,0,0];draw(){this.draws++;}project(){return null;}},Sound:SilentSound,document:doc,globalThis:display,matchMedia:()=>({matches:false}),requestAnimationFrame:()=>0,
     addEventListener:win.addEventListener.bind(win)};
-  const main=await new AsyncFunction(...Object.keys(bindings),source+'\nreturn {input,tick,launch,pause};')(...Object.values(bindings));
-  main.launch(true);
+  const main=await new AsyncFunction(...Object.keys(bindings),source+'\nreturn {input,tick,launch,pause,frame,get scene(){return scene;},get game(){return game;}};')(...Object.values(bindings));
+  if(autoLaunch)main.launch(true);
   const event=(target,type,properties={})=>{const e=new Event(type,{cancelable:true});Object.assign(e,properties);target.dispatchEvent(e);return e;};
   let buttons=0,suppressMouse=false;
   function mouse(button,down){
@@ -43,7 +45,7 @@ async function entrypoint(lockOnRequest=true){
     if(buttons===0)suppressMouse=false;
   }
   const expect=(fire,jet)=>assert.deepEqual({fire:main.input().fire,jet:main.input().jet},{fire,jet});
-  return {...main,doc,win,canvas,mouse,event,expect,allowCapture(){lockOnRequest=true;}};
+  return {...main,doc,win,canvas,mouse,event,expect,display,allowCapture(){lockOnRequest=true;}};
 }
 
 for(const first of [0,2])for(const releaseFirst of [0,2]){
@@ -72,4 +74,20 @@ test('pause and pointer-lock loss clear held buttons and pending fire',async()=>
 test('the click used to acquire pointer lock does not also fire',async()=>{
   const m=await entrypoint(false);m.allowCapture();m.mouse(0,true);m.expect(false,false);m.mouse(0,false);m.expect(false,false);
   m.mouse(0,true);m.expect(true,false);m.tick(STEP);m.mouse(0,false);m.expect(false,false);
+});
+
+test('idle rendering sleeps until graphics, viewport, density or lifecycle invalidation',async()=>{
+  const m=await entrypoint(true,false);m.frame(1000);assert.equal(m.scene.draws,1);
+  for(let i=1;i<=240;i++)m.frame(1000+i*16);assert.equal(m.scene.draws,1);
+  let expected=1;
+  const draw=()=>{m.frame(6000);assert.equal(m.scene.draws,++expected);m.frame(6016);assert.equal(m.scene.draws,expected);};
+  for(const [id,type,value] of [['fov','input',100],['quality','change',1],['motion','change',true]]){
+    const el=m.doc.getElementById(id);el.value=value;el.checked=value;m.event(el,type);draw();
+  }
+  m.win.dispatchEvent(new Event('resize'));draw();m.display.devicePixelRatio=2;draw();
+  m.win.dispatchEvent(new Event('pageshow'));draw();m.doc.dispatchEvent(new Event('visibilitychange'));draw();
+  m.launch(true);m.frame(7000);m.frame(7016);assert.equal(m.scene.draws,expected+2);
+  m.pause();m.frame(7032);const pausedDraws=m.scene.draws;
+  for(let i=0;i<60;i++)m.frame(7050+i*16);assert.equal(m.scene.draws,pausedDraws);
+  m.launch(true,true);m.frame(9000);assert.equal(m.scene.draws,pausedDraws+1);
 });

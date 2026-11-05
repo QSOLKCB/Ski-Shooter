@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import {Renderer,boxVertices,ringVertices} from '../vendor/vanillajs/modules/render-webgl/index.js';
+import {Renderer,boxVertices} from '../vendor/vanillajs/modules/render-webgl/index.js';
 import {normalize,subtract,cross,dot,quatMultiply,rotate,perspective,viewMatrix,multiplyMatrices,seededRandom,mix} from '../vendor/vanillajs/modules/math/index.js';
+import {EffectGeometry,EffectMesh} from './effects.js';
 import {terrainTriangles,terrain,pylons,BASE,CORE} from './world.js';
 
 export function cameraQuaternion(yaw,pitch){return quatMultiply([0,Math.sin(yaw/2),0,Math.cos(yaw/2)],[Math.sin(pitch/2),0,0,Math.cos(pitch/2)]);}
@@ -16,14 +17,6 @@ function program(gl,vs,fs){
 function octahedron(pos,r,color){
   const v=[[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]].map(v=>v.map((n,i)=>n+pos[i]));
   const out=[];for(const f of [[0,2,4],[4,2,1],[1,2,5],[5,2,0],[4,3,0],[1,3,4],[5,3,1],[0,3,5]])for(const i of f)out.push(...v[i],...color);return out;
-}
-function cylinder(center,radius,height,color,sides=12){
-  const out=[];for(let i=0;i<sides;i++){
-    const a=i/sides*Math.PI*2,b=(i+1)/sides*Math.PI*2;
-    const x=center[0],y=center[1],z=center[2];
-    const p=[x+Math.cos(a)*radius,y,z+Math.sin(a)*radius],q=[x+Math.cos(b)*radius,y,z+Math.sin(b)*radius];
-    for(const v of [p,q,[q[0],y+height,q[2]],p,[q[0],y+height,q[2]],[p[0],y+height,p[2]],[x,y+height,z],[p[0],y+height,p[2]],[q[0],y+height,q[2]]])out.push(...v,...color);
-  }return out;
 }
 function groundRing(x,z,radius,color){
   const out=[],vertex=(a,r)=>{const X=x+Math.cos(a)*r,Z=z+Math.sin(a)*r;return [X,terrain(X,Z).height+.16,Z];};
@@ -64,7 +57,7 @@ export class Scene {
       const s=2+rng()*7;structures.push(...octahedron([x,terrain(x,z).height-s*.4,z],s,[.17,.23,.24]));
     }
     this.structures=r.mesh(structures);this.lights=r.mesh(lights);
-    this.dynamic=r.mesh([]);this.trails=r.mesh([],'lines');this.textureMeshes=[];
+    this.geometry=new EffectGeometry();this.dynamic=new EffectMesh(r);this.trails=new EffectMesh(r,'lines');
     this.textureProgram=program(gl,`attribute vec3 aPosition;attribute vec2 aUV;uniform mat4 uVP;uniform mat4 uModel;varying vec2 vUV;varying float vDepth;void main(){gl_Position=uVP*uModel*vec4(aPosition,1.);vUV=aUV;vDepth=gl_Position.w;}`,`precision mediump float;varying vec2 vUV;varying float vDepth;uniform sampler2D uTexture;uniform vec3 uTint;uniform float uFog;void main(){vec3 c=texture2D(uTexture,vUV).rgb*uTint;float f=exp(-max(0.,vDepth)*uFog);gl_FragColor=vec4(mix(vec3(.018,.03,.05),c,f),1.);}`);
     this.tp={};for(const n of ['aPosition','aUV'])this.tp[n]=gl.getAttribLocation(this.textureProgram,n);for(const n of ['uVP','uModel','uTexture','uTint','uFog'])this.tp[n]=gl.getUniformLocation(this.textureProgram,n);
     this.skyProgram=program(gl,`attribute vec2 aPosition;varying vec2 vUV;void main(){vUV=aPosition;gl_Position=vec4(aPosition,1.,1.);}`,`precision mediump float;varying vec2 vUV;uniform mat3 uRotation;uniform float uAspect;uniform float uFov;void main(){vec3 d=normalize(uRotation*vec3(vUV.x*uAspect*uFov,vUV.y*uFov,-1.));float h=smoothstep(-.25,.8,d.y);vec3 c=mix(vec3(.26,.36,.37),vec3(.015,.045,.07),h);vec3 sun=normalize(vec3(-.45,.2,-.8));float angle=dot(d,sun);c+=vec3(.9,.45,.19)*pow(max(0.,angle),50.)*.5;c=mix(c,vec3(1.,.81,.47),smoothstep(.9985,.9993,angle));float cloud=sin(d.x*22.+d.y*32.)*sin(d.z*20.-d.y*21.);c+=max(0.,cloud)*.018*smoothstep(0.,.3,d.y);gl_FragColor=vec4(c,1.);}`);
@@ -114,16 +107,9 @@ export class Scene {
     gl.disable(gl.DEPTH_TEST);gl.useProgram(this.skyProgram);gl.bindBuffer(gl.ARRAY_BUFFER,this.skyBuffer);gl.enableVertexAttribArray(this.sp.position);gl.vertexAttribPointer(this.sp.position,2,gl.FLOAT,false,8,0);
     const right=rotate(orientation,[1,0,0]),up=rotate(orientation,[0,1,0]),back=rotate(orientation,[0,0,1]);gl.uniformMatrix3fv(this.sp.uRotation,false,[...right,...up,...back]);gl.uniform1f(this.sp.uAspect,aspect);gl.uniform1f(this.sp.uFov,Math.tan(angle/2));gl.drawArrays(gl.TRIANGLES,0,3);gl.enable(gl.DEPTH_TEST);
     gl.useProgram(r.program);gl.uniformMatrix4fv(r.vp,false,this.vp);r.draw(this.ground);r.draw(this.structures);r.draw(this.lights);
-    const dynamic=[],lines=[];
-    for(const e of game.enemies){if(e.health<=0)continue;const pos=mix(e.previous,e.position,alpha);
-      dynamic.push(...cylinder([pos[0],pos[1]-.6,pos[2]],.55,.6,[1,.37,.12],8));
-      dynamic.push(...octahedron([pos[0],pos[1]-.9-(reducedMotion?0:Math.sin(game.time*37+e.index)*.2),pos[2]],.42,[1,.7,.22]));
-      lines.push(...ringVertices([pos[0],pos[1]+1.65,pos[2]],2.5,[.9,.35,.14],16));
-    }
-    for(const s of game.shots){const pos=mix(s.previous,s.position,alpha),c=s.owner==='player'?[.35,1,.93]:[1,.35,.12];dynamic.push(...octahedron(pos,.3,c));lines.push(...s.previous,...c,...pos,...c);}
-    for(const e of game.effects){const radius=(.55-e.life)*14+.3;lines.push(...ringVertices(e.position,radius,e.owner==='player'?[.45,.95,.86]:[1,.5,.2],24));dynamic.push(...octahedron(e.position,e.life*1.8,[1,.8,.4]));}
-    if(!game.carrying){const pos=[CORE[0],terrain(...CORE).height+3,CORE[1]];dynamic.push(...octahedron(pos,1.7,game.kills===6?[.4,1,.9]:[1,.55,.18]));}
-    r.update(this.dynamic,dynamic);r.update(this.trails,lines);r.draw(this.dynamic);r.draw(this.trails);
+    this.geometry.build(game,alpha,reducedMotion);
+    this.dynamic.update(this.geometry.dynamic);this.trails.update(this.geometry.lines);
+    r.draw(this.dynamic.mesh);r.draw(this.trails.mesh);
     this.textured(this.panels,this.modelMatrix([0,0,0]),[.55,.65,.63]);
     for(const e of game.enemies){if(e.health<=0||!this.enforcer)continue;const pos=mix(e.previous,e.position,alpha),b=this.enforcer.bounds,s=3.4/(b.max[1]-b.min[1]);const centerX=(b.min[0]+b.max[0])/2,centerZ=(b.min[2]+b.max[2])/2;
       const yaw=Math.atan2(-(camera[0]-pos[0]),-(camera[2]-pos[2]));
