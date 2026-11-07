@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SITE, DIST = ROOT/'site', ROOT/'dist'
 paths = ['index.html','style.css','credits.html','LICENSE','NOTICE']
-paths += ['src/'+name for name in ('world.js','game.js','render.js','effects.js','audio.js','main.js')]
+paths += ['src/'+name for name in ('world.js','broadphase.js','game.js','render.js','effects.js','audio.js','main.js')]
 paths += ['vendor/vanillajs/'+name for name in ('LICENSE','NOTICE','modules/math/index.js','modules/time/index.js','modules/collision/index.js','modules/render-webgl/index.js')]
 paths += ['assets/librequake/'+name for name in ('COPYING','CREDITS','conc1_1.png','enforcer.json','enforcer.png','v_rock.json','v_rock.png','rocket1i.wav','r_exp3.wav','lhit.wav')]
 if DIST.exists():

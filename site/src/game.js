@@ -2,6 +2,10 @@
 import {add,subtract,scale,normalize,dot,length,clamp} from '../vendor/vanillajs/modules/math/index.js';
 import {castSegment,castMovingSegment,moveAndSlideAABB} from '../vendor/vanillajs/modules/collision/index.js';
 import {terrain,castTerrain,pylons,BASE,CORE,HALF} from './world.js';
+import {segmentCandidates,sweptBoxCandidates} from './broadphase.js';
+
+// OPT-INV-001: pylons are static, so their boxes are listed once.
+const PYLON_BOXES=pylons.map(c=>c.box),BODY=[.5,.9,.5];
 
 export const STEP=1/120;
 export const PHYSICS=Object.freeze({gravity:22,thrust:36,drain:26,recharge:20,skiDrag:.055,walkSpeed:12,maxSpeed:110});
@@ -45,7 +49,7 @@ function movePlayer(p,input,dt){
     // Framework swept upright box collision against physical pylons. Terrain contact
     // remains game-owned; the stock walking controller does not support slopes.
     const center=add(p.position,[0,.9,0]);
-    const moved=moveAndSlideAABB(center,p.velocity,h,[.5,.9,.5],pylons.map(c=>c.box));
+    const moved=moveAndSlideAABB(center,p.velocity,h,BODY,sweptBoxCandidates(center,scale(p.velocity,h),BODY,PYLON_BOXES));
     p.position=add(moved.position,[0,-.9,0]);p.velocity=moved.velocity;
     const g=terrain(p.position[0],p.position[2]);
     if(p.position[1]<=g.height+.03){
@@ -81,7 +85,7 @@ export function fire(game,origin,direction,velocity=[0,0,0],owner='player'){
 }
 function lineClear(a,b){
   const delta=subtract(b,a);const t=castTerrain(a,delta);
-  return (!t||t.time>.999)&&!castSegment(a,delta,pylons);
+  return (!t||t.time>.999)&&!castSegment(a,delta,segmentCandidates(a,delta,pylons));
 }
 function damage(game,actor,amount,midair=false){
   if(actor.health<=0)return;
@@ -140,10 +144,16 @@ export function stepGame(game,input,dt=STEP){
     }
   }
   const hits=[];
+  // Targets do not move or take damage until every shot has been swept, so the
+  // full-tick collider lists are built once per tick (OPT-INV-001); a shot that
+  // expires mid-tick still gets its own scaled list, exactly as before.
+  const targets=(owner,fraction)=>owner==='player'?game.enemies.filter(e=>e.health>0).map(e=>({id:e.id,box:actorBox(e.previous),displacement:scale(subtract(e.position,e.previous),fraction)})):[{id:'player',box:{min:add(p.previous,[-.5,0,-.5]),max:add(p.previous,[.5,1.8,.5])},displacement:scale(subtract(p.position,p.previous),fraction)}];
+  const fullTick={};
   for(const shot of game.shots){
     shot.previous=[...shot.position];const travel=Math.min(dt,shot.life),fraction=travel/dt,delta=scale(shot.velocity,travel);
-    const colliders=[...pylons,...(shot.owner==='player'?game.enemies.filter(e=>e.health>0).map(e=>({id:e.id,box:actorBox(e.previous),displacement:scale(subtract(e.position,e.previous),fraction)})):[{id:'player',box:{min:add(p.previous,[-.5,0,-.5]),max:add(p.previous,[.5,1.8,.5])},displacement:scale(subtract(p.position,p.previous),fraction)}])];
-    const actor=castMovingSegment(shot.position,delta,colliders,{halfSize:.22});
+    const side=shot.owner==='player'?'player':'enemy';
+    const colliders=fraction===1?(fullTick[side]??=[...pylons,...targets(shot.owner,1)]):[...pylons,...targets(shot.owner,fraction)];
+    const actor=castMovingSegment(shot.position,delta,segmentCandidates(shot.position,delta,colliders,.22,true),{halfSize:.22});
     const ground=castTerrain(shot.position,delta,.22);
     const hit=ground&&(!actor||ground.time<=actor.time)?{...ground,id:'terrain'}:actor;
     if(hit){hits.push({shot,hit,fraction:hit.time*fraction,time:hit.time*travel});shot.life=0;}
