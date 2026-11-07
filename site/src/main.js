@@ -7,7 +7,7 @@ import {terrain,castTerrain,BASE,CORE,pylons} from './world.js';
 import {Scene} from './render.js';
 import {Sound} from './audio.js';
 import {FpsGamepad,PadNav,standardPads,lookRate} from './gamepad.js';
-import {snapElapsed} from './pacing.js';
+import {FrameSnapper} from './pacing.js';
 import {storage,readSettings,saveSettings,readRecords,recordRun,saveRecords,formatTime} from './prefs.js';
 
 const $=id=>document.getElementById(id),canvas=$('world'),overlay=$('overlay'),ctx=overlay.getContext('2d');
@@ -18,8 +18,10 @@ const sound=new Sound(),keys=new Set(),touch=new Map(),mouse=new Set();
 let drag=null,pendingFire=false;
 // Settings and personal bests persist locally when storage is available (src/prefs.js).
 const store=storage(globalThis),saved=readSettings(store);
-let settings={...saved,motion:saved.motion??matchMedia('(prefers-reduced-motion: reduce)').matches},records=readRecords(store);
-const persist=()=>saveSettings(store,settings);
+// `motionChoice` stays null until the player sets reduced motion, so an unrelated settings
+// change never freezes the system preference into an explicit override.
+let motionChoice=saved.motion,settings={...saved,motion:saved.motion??matchMedia('(prefers-reduced-motion: reduce)').matches},records=readRecords(store);
+const persist=()=>saveSettings(store,{...settings,motion:motionChoice}),snapper=new FrameSnapper(STEP);
 // Controller (src/gamepad.js): sampled once per animation frame, merged into the same command.
 const pad=new FpsGamepad(),padNav=new PadNav();let padState=null,navContext='',padLaunch=false,padUsed=false;
 document.body.classList.add('in-menu');clock.setPaused(true);
@@ -37,7 +39,9 @@ function applySettings(){
   showRecords();
 }
 function notice(message,seconds=3){text('notice',message);noticeUntil=game.time+seconds;}
-function clearInput(){keys.clear();touch.clear();mouse.clear();drag=null;pendingFire=false;pad.disarm();padState=null;document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));}
+// Every lifecycle transition (launch, resume, pause, finish) re-arms both the flight pad and menu
+// navigation, so a button held across it can neither act in flight nor activate a menu control.
+function clearInput(){keys.clear();touch.clear();mouse.clear();drag=null;pendingFire=false;pad.disarm();padState=null;padNav.disarm();navContext='';snapper.reset();document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));}
 function fatal(error){failed=true;paused=true;clock.setPaused(true);clearInput();sound.pause();$('fatal').hidden=false;text('fatal-message',`${error.message||error}. Try a browser with WebGL enabled, and serve this folder over HTTP rather than opening index.html directly.`);console.error(error);}
 function pause(reason='Paused'){
   if(!started||paused)return;invalidate();paused=true;clock.setPaused(true);clearInput();sound.pause();
@@ -81,7 +85,7 @@ $('pad-invert').addEventListener('change',e=>{settings.padInvert=e.target.checke
 $('fov').addEventListener('input',e=>{settings.fov=+e.target.value;invalidate();text('fov-value',`${settings.fov}°`);persist();});
 $('quality').addEventListener('change',e=>{settings.resolution=+e.target.value;invalidate();persist();});
 $('lead-assist').addEventListener('change',e=>{settings.lead=e.target.checked;persist();});
-$('motion').addEventListener('change',e=>{settings.motion=e.target.checked;invalidate();persist();});
+$('motion').addEventListener('change',e=>{settings.motion=motionChoice=e.target.checked;invalidate();persist();});
 $('sound').addEventListener('click',()=>{settings.muted=!settings.muted;sound.mute(settings.muted);persist();$('sound').setAttribute('aria-pressed',String(settings.muted));text('sound',settings.muted?'Sound off':'Sound on');});
 applySettings();
 
@@ -192,6 +196,7 @@ function drawOverlay(alpha){
 function pollPad(dt,now){
   const pads=standardPads(),s=padState=pad.sample(pads);
   if(started&&!paused){
+    navContext='';
     if(!s.armed)return;
     if(s.active&&!padUsed){padUsed=true;text('hud-controls','A / LB ski · LT / RB jet · RT fire · START pause');}
     if(s.pressed.pause){pause('Flight paused');return;}
@@ -236,7 +241,7 @@ function frame(now){
   try{
     const elapsed=Math.max(0,(now-lastTime)/1000);lastTime=now;
     pollPad(elapsed,now);
-    const result=clock.advance(snapElapsed(elapsed,STEP),tick);
+    const result=clock.advance(snapper.snap(elapsed),tick);
     // Paused/menu state has no animation. Keep its composited frame until a
     // resize, display-density change, graphics setting or lifecycle transition.
     const dpr=globalThis.devicePixelRatio||1;

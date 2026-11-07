@@ -51,4 +51,9 @@ export function recordRun(records, game) {
   return {time, score};
 }
 export const saveRecords = (store, records) => write(store, RECORDS_KEY, records);
-export const formatTime = t => t === null || t === undefined ? '--:--' : `${Math.floor(t / 60).toString().padStart(2, '0')}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+// Round to tenths once, then split, so 59.96 s reads 01:00.0 rather than 00:60.0.
+export function formatTime(t) {
+  if (!Number.isFinite(t)) return '--:--';
+  const tenths = Math.round(t * 10), minutes = Math.floor(tenths / 600), rest = tenths - minutes * 600;
+  return `${String(minutes).padStart(2, '0')}:${String(Math.floor(rest / 10)).padStart(2, '0')}.${rest % 10}`;
+}

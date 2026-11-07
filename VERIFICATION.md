@@ -11,13 +11,20 @@
 
 ## Controller, pacing, persistence and simulation broadphase (this upgrade)
 
-- 40 Node tests pass (8 new). The real entrypoint runs with a mock standard
+- 43 Node tests pass (11 new). The real entrypoint runs with a mock standard
   gamepad. A pad held at launch is ignored until neutral. Sticks steer and look;
   A/LB ski and LT/RB jet. A trigger tap released before the next tick fires exactly
   one disc. Start pauses and resumes only on fresh presses, and a trigger held
   through a pause does not fire after resume.
 - With frame snapping, rounded 60 Hz timestamps produce exactly two 120 Hz ticks
-  on all 3,600 frames; without it, more than 100 frames are uneven.
+  on all 3,600 frames; without it, more than 100 frames are uneven. Snapping
+  drift is repaid, so 125, 61, 59, 144, 240 and 30 Hz displays each run
+  7,200 ± 1 ticks in 60 s of wall time.
+- After Codex review, every pause, resume, launch and finish also re-arms menu
+  navigation. A button held into a second pause cannot activate the focused
+  Resume control; that test fails on the earlier code. An unset reduced-motion
+  preference stays unset when other settings are saved, and times round to
+  tenths before minutes and seconds are split.
 - Settings survive a reload through a mock store, and a finished run records
   validated personal bests. Corrupt or out-of-range stored values fall back to
   defaults.

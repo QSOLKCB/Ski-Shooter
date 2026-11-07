@@ -7,33 +7,35 @@ import {castSegment} from '../site/vendor/vanillajs/modules/collision/index.js';
 import {createGame,stepGame,aimLead,STEP} from '../site/src/game.js';
 import {terrain,castTerrain,BASE,CORE,pylons} from '../site/src/world.js';
 import {FpsGamepad,PadNav,standardPads,lookRate,PAD} from '../site/src/gamepad.js';
-import {snapElapsed} from '../site/src/pacing.js';
+import {FrameSnapper} from '../site/src/pacing.js';
 import {storage,readSettings,saveSettings,readRecords,recordRun,saveRecords,formatTime} from '../site/src/prefs.js';
 
 // Execute the actual entrypoint and its event handlers with a small DOM boundary.
 // Imports are supplied explicitly; no WebGL, browser driver or packages are needed.
 const source=(await readFile(new URL('../site/src/main.js',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'');
 const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
+const dom={active:null,menuItems:[]};
 class Element extends EventTarget {
-  hidden=false;disabled=false;textContent='';style={};
-  classList={add(){},remove(){},toggle(){}};
-  focus(){}setAttribute(){}setPointerCapture(){}
+  hidden=false;disabled=false;textContent='';style={};tagName='BUTTON';
+  classList={add(){},remove(){},toggle(){},contains(){return false;}};
+  focus(){dom.active=this;}setAttribute(){}setPointerCapture(){}click(){this.dispatchEvent(new Event('click'));}
+  closest(){return null;}getClientRects(){return [1];}querySelector(){return null;}querySelectorAll(){return dom.menuItems;}
   getBoundingClientRect(){return {width:640,height:400};}
   getContext(){return new Proxy({},{get:()=>()=>{}});}
 }
 class SilentSound {start(){return Promise.resolve();}pause(){}play(){}update(){}mute(){}}
-const pads={list:[]};
+const pads={list:[]},media={reduced:false};
 async function entrypoint(lockOnRequest=true,autoLaunch=true,localStorage=undefined){
   const win=new EventTarget(),doc=new EventTarget(),elements=new Map();
   doc.getElementById=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
-  doc.querySelectorAll=()=>[];doc.body=new Element();doc.pointerLockElement=null;
+  doc.querySelectorAll=()=>[];doc.body=new Element();doc.pointerLockElement=null;Object.defineProperty(doc,'activeElement',{get:()=>dom.active});
   const canvas=doc.getElementById('world');
   canvas.requestPointerLock=()=>{if(lockOnRequest)doc.pointerLockElement=canvas;return Promise.resolve();};
   doc.exitPointerLock=()=>{doc.pointerLockElement=null;doc.dispatchEvent(new Event('pointerlockchange'));};
   const display={devicePixelRatio:1,localStorage};
   const bindings={FixedClock,add,subtract,length,mix,clamp,castSegment,createGame,stepGame,aimLead,STEP,terrain,castTerrain,BASE,CORE,pylons,
-    FpsGamepad,PadNav,lookRate,snapElapsed,storage,readSettings,saveSettings,readRecords,recordRun,saveRecords,formatTime,standardPads:()=>pads.list,
-    Scene:class {ready=Promise.resolve();draws=0;camera=[0,0,0];draw(){this.draws++;}project(){return null;}},Sound:SilentSound,document:doc,globalThis:display,matchMedia:()=>({matches:false}),requestAnimationFrame:()=>0,
+    FpsGamepad,PadNav,lookRate,FrameSnapper,storage,readSettings,saveSettings,readRecords,recordRun,saveRecords,formatTime,standardPads:()=>pads.list,
+    Scene:class {ready=Promise.resolve();draws=0;camera=[0,0,0];draw(){this.draws++;}project(){return null;}},Sound:SilentSound,document:doc,globalThis:display,matchMedia:()=>({matches:media.reduced}),requestAnimationFrame:()=>0,
     addEventListener:win.addEventListener.bind(win)};
   const main=await new AsyncFunction(...Object.keys(bindings),source+'\nreturn {input,tick,launch,pause,frame,get scene(){return scene;},get game(){return game;}};')(...Object.values(bindings));
   if(autoLaunch)main.launch(true);
@@ -128,16 +130,18 @@ test('Start pauses and resumes on fresh presses only; a trigger held through the
   at({});at({buttons:[PAD.START]});const paused=m.game.time;at({});at({});assert.equal(m.game.time,paused,'and Start pauses again');
   pads.list=[];
 });
-test('fixed clock with frame snapping runs exactly two 120 Hz ticks per rounded 60 Hz frame',()=>{
-  const run=snap=>{const c=new FixedClock({step:STEP,maxFrame:.15,maxSteps:18});let last=0,uneven=0,ticks=0;
-    for(let i=1;i<=3600;i++){const now=Math.round(i*1000/60*10)/10,dt=(now-last)/1000;last=now;let n=0;c.advance(snap?snapElapsed(dt,STEP):dt,()=>{n++;ticks++;});if(n!==2)uneven++;}
+test('frame snapping gives two ticks per rounded 60 Hz frame and never changes the simulation rate',()=>{
+  const run=(snap,hz,frames,rounded=true)=>{const c=new FixedClock({step:STEP,maxFrame:.15,maxSteps:18}),f=new FrameSnapper(STEP);let last=0,uneven=0,ticks=0;
+    for(let i=1;i<=frames;i++){const t=i*1000/hz,now=rounded?Math.round(t*10)/10:t,dt=(now-last)/1000;last=now;let n=0;c.advance(snap?f.snap(dt):dt,()=>{n++;ticks++;});if(n!==Math.round(120/hz))uneven++;}
     return {uneven,ticks};};
-  const raw=run(false),snapped=run(true);
+  const raw=run(false,60,3600),snapped=run(true,60,3600);
   assert.ok(raw.uneven>100,`rounded timestamps judder without snapping (${raw.uneven} uneven frames)`);
   assert.deepEqual(snapped,{uneven:0,ticks:7200});
-  assert.equal(snapElapsed(1/144,STEP),1/144,'other refresh rates pass through');assert.equal(snapElapsed(0,STEP),0);
+  // Codex review: a steady 125 Hz display (8 ms frames, within the tolerance of one 8.33 ms
+  // tick) previously ran 7,500 ticks in 60 s. Drift is now repaid, so time tracks the wall clock.
+  for(const hz of [125,61,59,144,240,30])assert.ok(Math.abs(run(true,hz,hz*60,false).ticks-7200)<=1,`${hz} Hz keeps 120 ticks per second`);
+  const f=new FrameSnapper(STEP);assert.equal(f.snap(0),0);assert.equal(f.snap(1/144),1/144,'far from a tick count passes through');
 });
-
 class MemoryStore {constructor(){this.map=new Map();}getItem(k){return this.map.get(k)??null;}setItem(k,v){this.map.set(k,String(v));}}
 test('settings persist across reloads and a finished raid records validated personal bests',async()=>{
   const store=new MemoryStore();
@@ -167,4 +171,32 @@ test('corrupt or out-of-range stored values fall back to defaults',()=>{
   assert.deepEqual(recordRun(records,{status:'won',training:false,score:200,time:60}),{time:true,score:false});
   assert.deepEqual(recordRun(records,{status:'playing',training:false,score:900,time:1}),{time:false,score:false});
   assert.deepEqual(records.raid,{time:60,score:300});assert.equal(storage({get localStorage(){throw new Error('blocked');}}),null);
+});
+
+test('saving other settings keeps following the system reduced-motion preference until the player chooses',async()=>{
+  const store=new MemoryStore();media.reduced=false;
+  let m=await entrypoint(true,false,store);
+  const el=()=>m.doc.getElementById('sensitivity');el().value=1.4;m.event(el(),'input');
+  assert.equal(JSON.parse(store.getItem('ski-shooter-settings-v1')).motion,null,'unset stays unset');
+  media.reduced=true;m=await entrypoint(true,false,store);assert.equal(m.doc.getElementById('motion').checked,true,'system preference applies on reload');
+  const motion=m.doc.getElementById('motion');motion.checked=false;m.event(motion,'change');
+  m=await entrypoint(true,false,store);assert.equal(m.doc.getElementById('motion').checked,false,'an explicit choice wins');
+  media.reduced=false;
+});
+test('times are rounded before splitting minutes and seconds',()=>{
+  assert.equal(formatTime(59.96),'01:00.0');assert.equal(formatTime(59.94),'00:59.9');assert.equal(formatTime(0),'00:00.0');
+  assert.equal(formatTime(125.25),'02:05.3');assert.equal(formatTime(null),'--:--');
+});
+
+test('a button held into a second pause cannot activate the focused Resume control (Codex review)',async()=>{
+  pads.list=[padOf()];const m=await entrypoint();let now=1000;const at=over=>{pads.list=[padOf(over)];m.frame(now+=1000/60);};
+  dom.menuItems=[m.doc.getElementById('launch'),m.doc.getElementById('training')];
+  at({});at({buttons:[PAD.START]});at({});assert.equal(m.doc.getElementById('menu').hidden,false,'Start paused');
+  at({buttons:[PAD.B]});at({});assert.equal(m.doc.getElementById('menu').hidden,true,'B resumed');
+  at({buttons:[PAD.A]});assert.equal(m.input().ski,true,'after a neutral frame, holding A skis');
+  m.win.dispatchEvent(new Event('blur'));assert.equal(m.doc.getElementById('menu').hidden,false,'focus loss paused');
+  const time=m.game.time;for(let i=0;i<5;i++)at({buttons:[PAD.A]});
+  assert.equal(m.doc.getElementById('menu').hidden,false,'still paused while A is held');assert.equal(m.game.time,time);
+  at({});at({buttons:[PAD.A]});assert.equal(m.doc.getElementById('menu').hidden,true,'a deliberate fresh A on Resume resumes');
+  pads.list=[];dom.menuItems=[];dom.active=null;
 });
