@@ -9,6 +9,27 @@
 - Optimized effect streams match every Float32 bit of the frozen reference across 720 idle, flight and maximum-population frames. Upload tests cover unchanged values, signed zero, growth/shrink, empty/restart and injected failure; entrypoint tests cover idle graphics/viewport/density/lifecycle invalidation. Seven paired CPU observations per workload are retained in [the optimization report](docs/OPTIMIZATION.md).
 - The managed preview browser was opened, but it cannot create a WebGL context. The game’s visible unsupported-graphics message appeared; visual rendering and hardware play feel could not be checked in that environment.
 
+## Controller, pacing, persistence and simulation broadphase (this upgrade)
+
+- 40 Node tests pass (8 new). The real entrypoint runs with a mock standard
+  gamepad. A pad held at launch is ignored until neutral. Sticks steer and look;
+  A/LB ski and LT/RB jet. A trigger tap released before the next tick fires exactly
+  one disc. Start pauses and resumes only on fresh presses, and a trigger held
+  through a pause does not fire after resume.
+- With frame snapping, rounded 60 Hz timestamps produce exactly two 120 Hz ticks
+  on all 3,600 frames; without it, more than 100 frames are uneven.
+- Settings survive a reload through a mock store, and a finished run records
+  validated personal bests. Corrupt or out-of-range stored values fall back to
+  defaults.
+- The broadphase equivalence tests and the full-state A/B parity run are
+  described in [the optimization notes](docs/OPTIMIZATION.md#simulation-broadphase-exact).
+- Executed locally in Chromium (pre-installed, SwiftShader WebGL):
+  - `scripts/browser_smoke.py` passed in full.
+  - A separate mocked-controller session confirmed that the first D-pad press
+    focuses Start raid and A launches it. Stick plus A skis to 52 km/h, LT jets,
+    an RT tap fires, and Start pauses then resumes, with no page errors.
+- A physical controller was not available; real hardware feel remains unverified.
+
 ## CI coverage
 
 The workflow repeats the simulation, source and packaging checks. Its Chromium check uses explicitly selected **SwiftShader software WebGL**, loads the actual LibreQuake meshes/textures, checks for GL errors and varied framebuffer pixels, and exercises launch, flight school, pause, focus loss and narrow layout. It retains the assertion result, browser stderr, screenshot and package manifest as `ski-shooter-verification`.

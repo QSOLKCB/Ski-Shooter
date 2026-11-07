@@ -82,3 +82,45 @@ Run `node scripts/bench-render.mjs` to reproduce paired observations and emit
 framebuffer comparisons, GL-error checks, idle/settings/pause checks and screenshots.
 Exact parity and work-count assertions are gates; timing values are observations.
 Physical-GPU FPS, human play feel and other browser engines remain unmeasured.
+
+## Simulation broadphase (exact)
+
+Profiling the 120 Hz simulation (input-driven mission pilot, both modes) put about
+45% of CPU inside the pinned VANILLAJS collision module. Every disc was cast
+against all six pylons and every live target each tick, and the player's swept
+body was solved against all six pylons on every substep. VANILLAJS stays pinned
+and unmodified, so the reduction sits in game-owned code (`site/src/broadphase.js`):
+
+- **OPT-REDUCE-001.** A collider reaches `castSegment`/`castMovingSegment` only if
+  the segment's per-axis range, in that collider's moving frame, overlaps its box
+  expanded by the cast half-size plus a 1 mm margin. A hit at time t puts the
+  point inside the expanded box, so a collider outside that range can never be
+  reported. A box reaches `moveAndSlideAABB` only if the first sweep's axis range
+  can touch it. Slides only zero velocity components and consume remaining time,
+  so later passes stay inside that range (plus 1e-6 skins). A possible start
+  overlap returns the complete list, because penetration recovery can move further.
+  Kept colliders keep their order, so equal-time tie-breaks are unchanged. The game
+  does not read the result's array index.
+- **OPT-INV-001.** Static pylon boxes are listed once. Full-tick target lists are
+  built once per tick: targets neither move nor take damage until every disc has
+  been swept. A disc that expires mid-tick still gets its own scaled list.
+
+Gates:
+
+- `tests/broadphase.test.mjs` compares 60,000 randomised static, moving-target and
+  swept-body queries with the full lists, including starts inside pylons.
+- `scripts/parity-ab.mjs <ref>` exports `site/` at a commit and hashes the complete
+  serialised game state (signed zero included) after every tick. It runs the
+  mission pilot and four seeded chaotic flyers that ski, jet, spin and fire into
+  terrain, pylons and sentries, in flight school and raid.
+
+| Measurement (`docs/OPT_SIM_AB.json`) | Reference 9864a6c | Candidate |
+| --- | ---: | ---: |
+| Ticks compared, full-state hash | 74,715 | identical |
+| Median stepGame CPU per tick, interleaved ABBA ×6 | 64.84 µs | 11.04 µs |
+
+Node 22, this container. Median of six interleaved rounds over the whole
+workload. Separately, the plain mission pilot measured 25.25 → 11.92 µs per tick.
+These are CPU simulation costs only, not frame rates or GPU measurements. The
+remaining cost is spread across small vector helpers and garbage collection; it
+was left alone rather than rewriting physics arithmetic.
