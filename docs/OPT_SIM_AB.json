@@ -1,0 +1,37 @@
+{
+  "reference": "9864a6cdd741a5cb9938d6de610711be7aaeedc9",
+  "scenarios": 10,
+  "ticks_compared": 74715,
+  "parity": "exact",
+  "outcomes": "school/pilot:won@6033 school/chaos11:playing@10800 school/chaos23:playing@10800 school/chaos47:playing@10800 school/chaos95:playing@10800 raid/pilot:won@6033 raid/chaos11:lost@4325 raid/chaos23:lost@3887 raid/chaos47:lost@8009 raid/chaos95:lost@3228",
+  "reference_us_per_tick": [
+    63.12,
+    64.84,
+    64.12,
+    65.03,
+    63.83,
+    66.65
+  ],
+  "candidate_us_per_tick": [
+    11.1,
+    11.04,
+    11.01,
+    11.01,
+    10.56,
+    11.6
+  ],
+  "median_reference_us": 64.84,
+  "median_candidate_us": 11.04,
+  "node": "v22.23.4",
+  "source_sha256": {
+    "site/src/game.js": {
+      "reference": "a478b7f4a26f2f138cd802af6a3364e32e529f7b86317e783dac9a0e6ac2ac6e",
+      "candidate": "dd3e8989f05c1b218c015eda7eea5a91be29cdb0cc3b178d39a922427f9f1991"
+    },
+    "site/src/world.js": {
+      "reference": "ac5824ae0d21a2a55e06562e2bbcad91096aec33e1b882b9bdcee40d2985a0f4",
+      "candidate": "ac5824ae0d21a2a55e06562e2bbcad91096aec33e1b882b9bdcee40d2985a0f4"
+    }
+  },
+  "scope": "CPU time inside stepGame only, Node, this host. Not a frame rate or GPU measurement."
+}

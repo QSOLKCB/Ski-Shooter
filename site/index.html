@@ -19,10 +19,13 @@
       <div id="debrief" hidden></div>
       <div class="launch-actions"><button id="launch" class="primary" disabled>Loading terrain… <span>↗</span></button><button id="training" class="secondary" disabled>Flight school <span>↗</span></button></div>
       <p class="mode-note" id="mode-note">Solo raid · 6 airborne sentries · One stolen core</p>
+      <p class="mode-note records" id="records" aria-live="polite"></p>
       <details id="settings"><summary>Flight settings <span>+</span></summary><div class="settings-body">
         <label>Mouse sensitivity <output id="sens-value">1.0</output><input id="sensitivity" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
         <label>Field of view <output id="fov-value">90°</output><input id="fov" type="range" min="75" max="110" step="1" value="90"></label>
         <label>Resolution <select id="quality"><option value="0.6">Performance</option><option value="0.85" selected>Balanced</option><option value="1">Full</option></select></label>
+        <label>Controller look speed <output id="pad-sens-value">1.0</output><input id="pad-sensitivity" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
+        <label class="check"><input id="pad-invert" type="checkbox"> Invert controller look</label>
         <label class="check"><input id="lead-assist" type="checkbox" checked> Show projectile lead guide</label>
         <label class="check"><input id="motion" type="checkbox"> Reduce weapon motion</label>
         <button id="sound" class="small" aria-pressed="false">Sound on</button>
@@ -34,6 +37,7 @@
       <div><b>02</b><p><strong>Own the air</strong><span>Hold <kbd>RMB</kbd> or <kbd>SHIFT</kbd> to jet</span></p></div>
       <div><b>03</b><p><strong>Lead your target</strong><span><kbd>LMB</kbd> / <kbd>F</kbd> fires a travelling disc</span></p></div>
       <p class="manual-tip">Ski downhill to gain speed. Release the jets to recharge. Aim at the hollow diamond to meet a moving target.</p>
+      <p class="manual-tip pad-tip"><strong>Controller</strong> Left stick move · right stick look · hold <kbd>A</kbd> ski · hold <kbd>LT</kbd> jet · <kbd>RT</kbd> fire · <kbd>START</kbd> pause. D-pad and <kbd>A</kbd> drive the menus.</p>
       <p class="manual-footer">FLIGHT SCHOOL <span>Same mission. Sentries don’t shoot back.</span></p>
     </aside>
   </main>
@@ -44,7 +48,7 @@
     <div id="crosshair" aria-hidden="true"><i></i><b></b></div>
     <div class="speed"><span class="eyebrow">GROUND SPEED</span><strong id="speed">0</strong><span class="unit">KM/H</span><div class="speed-bar"><i id="speed-fill"></i></div><small>ALT <b id="altitude">0</b> M AGL</small></div>
     <div class="resources"><div><span>JET ENERGY</span><b id="energy-label">100</b><div class="meter"><i id="energy"></i></div></div><div><span>ARMOUR</span><b id="health-label">100</b><div class="meter armour"><i id="health"></i></div></div><p>DISC LAUNCHER <span>∞ <small id="weapon-state">READY</small></span></p></div>
-    <p class="hud-controls"><kbd>SPACE</kbd> ski <span>·</span> <kbd>RMB / SHIFT</kbd> jet <span>·</span> <kbd>LMB</kbd> fire</p>
+    <p class="hud-controls" id="hud-controls"><kbd>SPACE</kbd> ski <span>·</span> <kbd>RMB / SHIFT</kbd> jet <span>·</span> <kbd>LMB</kbd> fire</p>
     <div id="notice" role="status" aria-live="polite"></div>
     <div id="touch-controls"><div class="dpad"><button data-action="KeyW" aria-label="Forward">▲</button><button data-action="KeyA" aria-label="Left">◀</button><button data-action="KeyS" aria-label="Back">▼</button><button data-action="KeyD" aria-label="Right">▶</button></div><div class="touch-actions"><button data-action="Space">SKI</button><button data-action="ShiftLeft">JET</button><button data-action="KeyF">FIRE</button></div></div>
   </section>

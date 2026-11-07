@@ -24,6 +24,21 @@ Use a browser with WebGL and hardware acceleration. Serve over HTTP(S); opening 
 | Fire a travelling disc | Left mouse or F |
 | Pause and release cursor | Escape or Pause |
 
+### Controller (Xbox / standard gamepad)
+
+| Control | Action |
+| --- | --- |
+| Left stick / right stick | Move and strafe / look |
+| Hold A or LB | Ski |
+| Hold LT or RB | Jet |
+| RT | Fire a disc (a quick tap always fires once) |
+| Start | Pause / resume |
+| D-pad or left stick, A, B | Menus: move focus, activate (←/→ adjust a setting), close settings or resume |
+
+The browser must expose the standard Gamepad mapping. A controller arms only after every button and stick returns to neutral, again after any pause, resume or controller change, so a held trigger never fires and a held A never selects. A controller launch does not capture the mouse. Look speed and inversion are in **Flight settings**.
+
+Settings and personal bests (best time per mode for recovered cores, best score for any finished run) are saved in this browser when storage is available; stored values are validated and anything out of range falls back to the defaults.
+
 Release jets to recharge. Aim at the optional hollow diamond to intercept a moving target; the guide accounts for partial inheritance of your velocity. Jets provide upward thrust, not unconstrained flight. Touch buttons and drag aiming are included; competitive touch ergonomics are unverified.
 
 The mission is session-only. Restarting or reloading resets the run. Enemy respawns, saving, CTF teams and multiplayer are not included in 0.1.
@@ -36,7 +51,9 @@ The mission is session-only. Restarting or reloading resets the run. Enemy respa
 - Actual LibreQuake first-frame Enforcer and rocket-launcher meshes with original skins, concrete textures and weapon sounds. Static first frames are intentional; original skeletal/frame animation is not implemented.
 - VANILLAJS fixed clocks, vector/camera math, swept AABBs/moving-target queries and the release’s retained-buffer WebGL renderer. Terrain and gameplay extensions are game-owned.
 - OPT-based effect staging with reusable typed buffers, exact unchanged-upload detection and redraw-on-change menus/pause. See [measured rendering results](docs/OPTIMIZATION.md); visual detail and simulation rate are preserved.
-- Pause on Escape, lost focus, hidden tab and pointer-lock loss; held inputs are cancelled. Catch-up is capped, and render positions interpolate between physics ticks.
+- Pause on Escape, lost focus, hidden tab and pointer-lock loss; held inputs are cancelled. Catch-up is capped, and render positions interpolate between physics ticks. Frames within 0.5 ms of a whole number of 120 Hz ticks are snapped, so the rounded timestamps of a 60 Hz display give exactly two ticks per frame instead of alternating 1/2/3. The time removed or added is carried as bounded drift and repaid, so simulation time always tracks the wall clock to within 0.5 ms, including at steady rates such as 125 Hz or 61 Hz (`src/pacing.js`).
+- Standard-gamepad flight and menu navigation (`src/gamepad.js`, adapted from QSOLKCB BLOAT-OPS/QwakeTF/ARCADE and VANILLAJS input patterns), plus locally saved settings and personal bests (`src/prefs.js`).
+- An exact broadphase (`src/broadphase.js`) in front of the pinned VANILLAJS collision queries: about 2× less simulation CPU for the mission pilot and about 6× in heavy combat, with every tick's complete state proven identical. See [the simulation measurements](docs/OPTIMIZATION.md#simulation-broadphase-exact).
 - Local Web Audio, settings for sensitivity/FOV/resolution/lead guide/reduced motion, and a visible WebGL failure message.
 
 The physics is an arcade approximation: an upright 1 × 1.8 × 1 metre body against pylons, feet contact against a piecewise planar heightfield, capped velocity and substepped terrain motion. Decorative rocks outside the central corridor do not collide. The ground sampler uses the exact rendered triangles. Terrain projectile sweeps split at grid and triangle boundaries; targets use translating AABBs. The lead marker assumes constant target velocity, while sentry tracks curve. Splash has terrain/pylon occlusion and distance falloff; terrain contact radius is a vertical offset approximation.
@@ -48,6 +65,7 @@ Python 3 and Node 22+ are used for developer checks; there are **no packages to 
 ```sh
 node --test tests/*.test.mjs
 node scripts/bench-render.mjs
+node scripts/parity-ab.mjs HEAD --time
 python3 scripts/verify.py
 python3 scripts/build.py
 python3 -m http.server 8000 --directory dist

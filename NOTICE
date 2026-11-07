@@ -9,6 +9,10 @@ Selected LibreQuake artwork and sounds retain their BSD-3-Clause terms.
 The complete COPYING and CREDITS are in site/assets/librequake
 (assets/librequake in the runtime package). No endorsement is implied.
 
+site/src/gamepad.js adapts Apache-2.0 input code from QSOLKCB/BLOAT-OPS,
+QSOLKCB/QwakeTF and QSOLKCB/ARCADE (same owner), which follow VANILLAJS
+deadzone and neutral re-arming patterns.
+
 The procedural world, terrain movement, mission, interface and integration
 are original work. No Tribes source code or assets are included.
 See UPSTREAM.json and the in-game credits for exact source provenance.

@@ -6,18 +6,42 @@ import {createGame,stepGame,aimLead,STEP} from './game.js';
 import {terrain,castTerrain,BASE,CORE,pylons} from './world.js';
 import {Scene} from './render.js';
 import {Sound} from './audio.js';
+import {FpsGamepad,PadNav,standardPads,lookRate} from './gamepad.js';
+import {FrameSnapper} from './pacing.js';
+import {storage,readSettings,saveSettings,readRecords,recordRun,saveRecords,formatTime} from './prefs.js';
 
 const $=id=>document.getElementById(id),canvas=$('world'),overlay=$('overlay'),ctx=overlay.getContext('2d');
 let scene,game=createGame(),clock=new FixedClock({step:STEP,maxFrame:.15,maxSteps:18}),paused=true,started=false,failed=false,lastTime=0,noticeUntil=0,hitUntil=0,hurtUntil=0,lastHUD=0;
 let renderDirty=true,drawDpr=0;
 const invalidate=()=>{renderDirty=true;};
 const sound=new Sound(),keys=new Set(),touch=new Map(),mouse=new Set();
-let drag=null,pendingFire=false,settings={sensitivity:1,fov:90,resolution:.85,lead:true,motion:matchMedia('(prefers-reduced-motion: reduce)').matches};
-$('motion').checked=settings.motion;
+let drag=null,pendingFire=false;
+// Settings and personal bests persist locally when storage is available (src/prefs.js).
+const store=storage(globalThis),saved=readSettings(store);
+// `motionChoice` stays null until the player sets reduced motion, so an unrelated settings
+// change never freezes the system preference into an explicit override.
+let motionChoice=saved.motion,settings={...saved,motion:saved.motion??matchMedia('(prefers-reduced-motion: reduce)').matches},records=readRecords(store);
+const persist=()=>saveSettings(store,{...settings,motion:motionChoice}),snapper=new FrameSnapper(STEP);
+// Controller (src/gamepad.js): sampled once per animation frame, merged into the same command.
+const pad=new FpsGamepad(),padNav=new PadNav();let padState=null,navContext='',padLaunch=false,padUsed=false;
 document.body.classList.add('in-menu');clock.setPaused(true);
 const text=(id,value)=>{const el=$(id);if(el.textContent!==String(value))el.textContent=String(value);};
+function showRecords(){
+  const r=mode=>records[mode]?`best ${formatTime(records[mode].time)} · ${records[mode].score} pts`:'no finished runs yet';
+  text('records',`Raid ${r('raid')} — Flight school ${r('school')}`);
+}
+function applySettings(){
+  $('sensitivity').value=settings.sensitivity;text('sens-value',settings.sensitivity.toFixed(1));
+  $('pad-sensitivity').value=settings.padSensitivity;text('pad-sens-value',settings.padSensitivity.toFixed(1));$('pad-invert').checked=settings.padInvert;
+  $('fov').value=settings.fov;text('fov-value',`${settings.fov}°`);$('quality').value=String(settings.resolution);
+  $('lead-assist').checked=settings.lead;$('motion').checked=settings.motion;
+  sound.mute(settings.muted);$('sound').setAttribute('aria-pressed',String(settings.muted));text('sound',settings.muted?'Sound off':'Sound on');
+  showRecords();
+}
 function notice(message,seconds=3){text('notice',message);noticeUntil=game.time+seconds;}
-function clearInput(){keys.clear();touch.clear();mouse.clear();drag=null;pendingFire=false;document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));}
+// Every lifecycle transition (launch, resume, pause, finish) re-arms both the flight pad and menu
+// navigation, so a button held across it can neither act in flight nor activate a menu control.
+function clearInput(){keys.clear();touch.clear();mouse.clear();drag=null;pendingFire=false;pad.disarm();padState=null;padNav.disarm();navContext='';snapper.reset();document.querySelectorAll('.held').forEach(el=>el.classList.remove('held'));}
 function fatal(error){failed=true;paused=true;clock.setPaused(true);clearInput();sound.pause();$('fatal').hidden=false;text('fatal-message',`${error.message||error}. Try a browser with WebGL enabled, and serve this folder over HTTP rather than opening index.html directly.`);console.error(error);}
 function pause(reason='Paused'){
   if(!started||paused)return;invalidate();paused=true;clock.setPaused(true);clearInput();sound.pause();
@@ -37,7 +61,9 @@ function launch(training=false,resume=false){
   clearInput();paused=false;started=true;lastTime=performance.now();lastHUD=0;clock.setPaused(false);
   $('menu').hidden=true;$('footer').hidden=true;$('pause').hidden=false;$('hud').hidden=false;
   document.body.classList.remove('in-menu','paused');document.body.classList.add('in-play');
-  canvas.focus();sound.start().catch(()=>{notice('Audio unavailable; flight controls are ready.',3);});capture();
+  canvas.focus();sound.start().catch(()=>{notice('Audio unavailable; flight controls are ready.',3);});
+  // A controller launch does not grab the mouse: the pad aims, and Start pauses.
+  if(padLaunch){padLaunch=false;notice('Controller ready — right stick looks, Start pauses.',4);}else capture();
   if(!resume)notice(training?'FLIGHT SCHOOL — Hold Space to ski. Hold Shift or RMB to jet.':'RIDGEBREAK — Clear six sentries, recover the core, return home.',5);
 }
 function finish(){
@@ -46,17 +72,22 @@ function finish(){
   text('title',won?'CORE RECOVERED':'FLIGHT ENDED');text('tagline',won?'Gravity was a suggestion.':'The ridge gets another round.');
   text('intro',won?'The core is home. Try a faster route through the basin.':'Use the ridges as cover and keep moving. The cyan landing zone repairs armour.');
   text('launch','Fly again ↗');text('training','Flight school ↗');text('mode-note',game.training?'Flight school completed':'Solo raid debrief');
-  $('debrief').hidden=false;text('debrief',`${game.score} points · ${Math.round(game.topSpeed*3.6)} km/h peak · ${game.midairs} midairs · ${game.directHits}/${game.shotsFired} direct hits`);$('launch').focus();
+  const best=recordRun(records,game);saveRecords(store,records);showRecords();
+  const pb=[best.time&&`new best time ${formatTime(game.time)}`,best.score&&'new best score'].filter(Boolean).join(' · ');
+  $('debrief').hidden=false;text('debrief',`${game.score} points · ${Math.round(game.topSpeed*3.6)} km/h peak · ${game.midairs} midairs · ${game.directHits}/${game.shotsFired} direct hits${won?` · ${formatTime(game.time)}`:''}${pb?` — ${pb.toUpperCase()}`:''}`);$('launch').focus();
 }
 $('launch').addEventListener('click',()=>launch(game.training,started&&game.status==='playing'));
 $('training').addEventListener('click',()=>launch(started&&game.status==='playing'?false:true));
 $('pause').addEventListener('click',()=>pause('Flight paused'));
-$('sensitivity').addEventListener('input',e=>{settings.sensitivity=+e.target.value;text('sens-value',settings.sensitivity.toFixed(1));});
-$('fov').addEventListener('input',e=>{settings.fov=+e.target.value;invalidate();text('fov-value',`${settings.fov}°`);});
-$('quality').addEventListener('change',e=>{settings.resolution=+e.target.value;invalidate();});
-$('lead-assist').addEventListener('change',e=>settings.lead=e.target.checked);
-$('motion').addEventListener('change',e=>{settings.motion=e.target.checked;invalidate();});
-$('sound').addEventListener('click',()=>{sound.mute(!sound.muted);$('sound').setAttribute('aria-pressed',String(sound.muted));text('sound',sound.muted?'Sound off':'Sound on');});
+$('sensitivity').addEventListener('input',e=>{settings.sensitivity=+e.target.value;text('sens-value',settings.sensitivity.toFixed(1));persist();});
+$('pad-sensitivity').addEventListener('input',e=>{settings.padSensitivity=+e.target.value;text('pad-sens-value',settings.padSensitivity.toFixed(1));persist();});
+$('pad-invert').addEventListener('change',e=>{settings.padInvert=e.target.checked;persist();});
+$('fov').addEventListener('input',e=>{settings.fov=+e.target.value;invalidate();text('fov-value',`${settings.fov}°`);persist();});
+$('quality').addEventListener('change',e=>{settings.resolution=+e.target.value;invalidate();persist();});
+$('lead-assist').addEventListener('change',e=>{settings.lead=e.target.checked;persist();});
+$('motion').addEventListener('change',e=>{settings.motion=motionChoice=e.target.checked;invalidate();persist();});
+$('sound').addEventListener('click',()=>{settings.muted=!settings.muted;sound.mute(settings.muted);persist();$('sound').setAttribute('aria-pressed',String(settings.muted));text('sound',settings.muted?'Sound off':'Sound on');});
+applySettings();
 
 const controls=new Set(['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyE','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
 addEventListener('keydown',e=>{
@@ -98,9 +129,9 @@ for(const button of document.querySelectorAll('[data-action]')){
   const release=e=>{touch.delete(e.pointerId);button.classList.remove('held');};
   button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
 }
-function input(){const pressed=key=>keys.has(key)||[...touch.values()].includes(key);return {
-  forward:Number(pressed('KeyW'))-Number(pressed('KeyS')),right:Number(pressed('KeyD'))-Number(pressed('KeyA')),
-  ski:pressed('Space'),jet:mouse.has(2)||pressed('ShiftLeft')||pressed('ShiftRight')||pressed('KeyE'),fire:pendingFire||mouse.has(0)||pressed('KeyF'),
+function input(){const pressed=key=>keys.has(key)||[...touch.values()].includes(key),ps=padState?.armed?padState:null,held=k=>!!ps?.held[k];return {
+  forward:clamp(Number(pressed('KeyW'))-Number(pressed('KeyS'))+(ps?ps.move[0]:0),-1,1),right:clamp(Number(pressed('KeyD'))-Number(pressed('KeyA'))+(ps?ps.move[1]:0),-1,1),
+  ski:pressed('Space')||held('ski')||held('skiAlt'),jet:mouse.has(2)||pressed('ShiftLeft')||pressed('ShiftRight')||pressed('KeyE')||held('jet')||held('jetAlt'),fire:pendingFire||mouse.has(0)||pressed('KeyF')||held('fire'),
   yaw:Number(pressed('ArrowLeft'))-Number(pressed('ArrowRight')),pitch:Number(pressed('ArrowUp'))-Number(pressed('ArrowDown')),
 };}
 function tick(dt){
@@ -160,11 +191,57 @@ function drawOverlay(alpha){
   }
   ctx.restore();
 }
+// Called once per animation frame, like mouse look. A trigger press queues one shot even if it
+// is released before the next tick, exactly like a short mouse click.
+function pollPad(dt,now){
+  const pads=standardPads(),s=padState=pad.sample(pads);
+  if(started&&!paused){
+    navContext='';
+    if(!s.armed)return;
+    if(s.active&&!padUsed){padUsed=true;text('hud-controls','A / LB ski · LT / RB jet · RT fire · START pause');}
+    if(s.pressed.pause){pause('Flight paused');return;}
+    if(s.pressed.fire)pendingFire=true;
+    const p=game.player,k=settings.padSensitivity*dt;
+    p.yaw-=lookRate(s.look[1],1)*k;p.pitch=clamp(p.pitch-lookRate(s.look[0],1)*k*(settings.padInvert?-1:1),-1.48,1.48);
+    return;
+  }
+  if(s.armed&&s.pressed.pause&&started&&paused&&game.status==='playing'){padLaunch=true;launch(game.training,true);return;}
+  menuPad(pads,now);
+}
+// Menus (pattern from BLOAT-OPS/ARCADE): D-pad or stick moves focus spatially, A activates,
+// left/right adjusts a focused setting, B closes settings or resumes a paused flight.
+function menuPad(pads,now){
+  const root=$('menu'),context=root.hidden?'':(paused&&started?'pause':'menu')+(root.querySelector?.('details[open]')?':settings':'');
+  if(context!==navContext){navContext=context;padNav.disarm();}
+  if(!context)return;const actions=padNav.sample(pads,now);if(!actions.length)return;
+  const items=[...root.querySelectorAll('button,select,input,summary,a[href]')].filter(el=>!el.disabled&&!el.closest('[hidden]')&&el.getClientRects().length);if(!items.length)return;
+  const cur=items.includes(document.activeElement)?document.activeElement:null;
+  const nudge=(el,dir)=>{if(el.tagName==='SELECT'){const i=clamp(el.selectedIndex+dir,0,el.options.length-1);if(i!==el.selectedIndex){el.selectedIndex=i;el.dispatchEvent(new Event('change',{bubbles:true}));}return true;}if(el.tagName==='INPUT'&&el.type==='range'){dir>0?el.stepUp():el.stepDown();el.dispatchEvent(new Event('input',{bubbles:true}));return true;}return false;};
+  const focus=el=>{el.focus({preventScroll:true,focusVisible:true});el.classList.add('pad-focus');el.addEventListener('blur',()=>el.classList.remove('pad-focus'),{once:true});el.scrollIntoView?.({block:'nearest'});};
+  for(const a of actions){
+    if(a==='back'){const open=root.querySelector('details[open]');if(open){open.open=false;focus(open.querySelector('summary'));}else if(started&&paused&&game.status==='playing'){padLaunch=true;launch(game.training,true);}return;}
+    // The first press lands on the primary action (Start raid / Resume flight / Fly again).
+    if(!cur){focus(items.find(el=>el.classList.contains('primary'))||items[0]);return;}
+    if(a==='confirm'){
+      if(cur.tagName==='SELECT'){cur.selectedIndex=(cur.selectedIndex+1)%cur.options.length;cur.dispatchEvent(new Event('change',{bubbles:true}));}
+      else if(cur.tagName==='INPUT'&&cur.type==='range')nudge(cur,1);
+      else if(cur.tagName==='INPUT'&&cur.type==='checkbox'){cur.checked=!cur.checked;cur.dispatchEvent(new Event('change',{bubbles:true}));}
+      else{if(cur.id==='launch'||cur.id==='training')padLaunch=true;cur.click();padLaunch=false;}
+      return;
+    }
+    if((a==='left'||a==='right')&&nudge(cur,a==='left'?-1:1))return;
+    const r=cur.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let best=null,score=Infinity;
+    for(const el of items){if(el===cur)continue;const q=el.getBoundingClientRect(),dx=q.left+q.width/2-cx,dy=q.top+q.height/2-cy,main=a==='up'?-dy:a==='down'?dy:a==='left'?-dx:dx,side=a==='up'||a==='down'?Math.abs(dx):Math.abs(dy);if(main<=1)continue;const sc=main+side*2;if(sc<score){score=sc;best=el;}}
+    if(!best){const i=items.indexOf(cur);best=items[clamp(i+(a==='up'||a==='left'?-1:1),0,items.length-1)];}
+    focus(best);return;
+  }
+}
 function frame(now){
   if(failed)return;
   try{
     const elapsed=Math.max(0,(now-lastTime)/1000);lastTime=now;
-    const result=clock.advance(elapsed,tick);
+    pollPad(elapsed,now);
+    const result=clock.advance(snapper.snap(elapsed),tick);
     // Paused/menu state has no animation. Keep its composited frame until a
     // resize, display-density change, graphics setting or lifecycle transition.
     const dpr=globalThis.devicePixelRatio||1;
